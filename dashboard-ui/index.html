@@ -172,14 +172,33 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
 .stat-val { font-size: 28px; font-weight: 700; }
 .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.source-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.src-ashby { background: rgba(139,92,246,.2); color: #a78bfa; border: 1px solid rgba(139,92,246,.3); }
+.src-greenhouse { background: rgba(74,222,128,.15); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+.src-lever { background: rgba(251,146,60,.15); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+.src-linkedin { background: rgba(96,165,250,.15); color: var(--blue); border: 1px solid rgba(96,165,250,.3); }
+.src-remotive { background: rgba(45,212,191,.15); color: var(--teal); border: 1px solid rgba(45,212,191,.3); }
+.src-wellfound { background: rgba(251,191,36,.15); color: var(--yellow); border: 1px solid rgba(251,191,36,.3); }
+.src-direct { background: rgba(102,102,128,.15); color: var(--muted); border: 1px solid rgba(102,102,128,.3); }
+.pending-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.pending-count { font-size: 13px; color: var(--muted); }
+.pending-tip { font-size: 12px; color: var(--muted); background: rgba(124,106,247,.08); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; }
+.pending-search { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; width: 260px; outline: none; }
+.pending-search:focus { border-color: var(--accent); }
+.open-btn { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--accent); background: rgba(124,106,247,.1); color: var(--accent); text-decoration: none; }
+.open-btn:hover { background: rgba(124,106,247,.2); }
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <span class="topbar-logo">&#9889; Dashboard</span>
-  <button class="tab active" onclick="switchView('pipeline', this)">Pipeline</button>
-  <button class="tab" onclick="switchView('progress', this)">Progress</button>
+  <button class="tab active" onclick="switchView('pipeline', this)" id="tab-pipeline">Pipeline</button>
+  <button class="tab" onclick="switchView('pending', this)" id="tab-pending">Pending</button>
+  <button class="tab" onclick="switchView('progress', this)" id="tab-progress">Progress</button>
   <span class="tab-sep"></span>
   <a href="/" class="back-link">&#8592; Setup</a>
 </div>
@@ -190,7 +209,7 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
     <div class="ftab" onclick="setFilter('evaluated', this)">EVALUATED</div>
     <div class="ftab" onclick="setFilter('applied', this)">APPLIED</div>
     <div class="ftab" onclick="setFilter('interview', this)">INTERVIEW</div>
-    <div class="ftab" onclick="setFilter('top', this)">TOP &ge;4.0</div>
+    <div class="ftab" onclick="setFilter('top', this)">TOP &ge;3.5</div>
     <div class="ftab" onclick="setFilter('skip', this)">SKIP</div>
   </div>
   <div class="table-wrap">
@@ -214,8 +233,33 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
     </table>
   </div>
   <div id="empty-state" class="empty-state hidden">
-    <h3>No applications yet</h3>
-    <p>Run <code>npm run scan</code> and evaluate some jobs first</p>
+    <h3 id="empty-state-msg">No applications yet</h3>
+    <p id="empty-state-sub">Run <code>npm run scan</code> and evaluate some jobs first</p>
+  </div>
+</div>
+
+<div id="view-pending" class="view">
+  <div class="pending-meta">
+    <span class="pending-count" id="pending-count">Loading...</span>
+    <input class="pending-search" type="text" id="pending-search" placeholder="Search company or URL..." oninput="renderPending()">
+    <span class="pending-tip">Run <code>node scan.mjs</code> in the sandbox to refresh this list</span>
+  </div>
+  <div class="table-wrap">
+    <table id="pending-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Company</th>
+          <th>URL</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pending-tbody"></tbody>
+    </table>
+  </div>
+  <div id="pending-empty" class="empty-state hidden">
+    <h3>No pending jobs</h3>
+    <p>Run <code>node scan.mjs</code> to populate the pipeline</p>
   </div>
 </div>
 
@@ -252,7 +296,7 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
 </div>
 
 <script>
-var allApps = [], metrics = null, currentFilter = 'all', sortField = 'num', sortDir = 1, openDropdownNum = null;
+var allApps = [], allPending = [], metrics = null, currentFilter = 'all', sortField = 'num', sortDir = 1, openDropdownNum = null;
 var STATUS_OPTIONS = ['Evaluated','Applied','Responded','Interview','Offer','Rejected','Discarded','SKIP'];
 function statusClass(s) {
   if (!s) return 's-evaluated';
@@ -280,6 +324,41 @@ function switchView(name, el) {
   document.getElementById('view-'+name).classList.add('active');
   el.classList.add('active');
   if (name==='progress'&&metrics) renderProgress();
+  if (name==='pending') renderPending();
+}
+function sourceClass(s) {
+  var map={ashby:'src-ashby',greenhouse:'src-greenhouse',lever:'src-lever',linkedin:'src-linkedin',remotive:'src-remotive',wellfound:'src-wellfound',direct:'src-direct'};
+  return map[s]||'src-direct';
+}
+function renderPending() {
+  var q=(document.getElementById('pending-search')||{}).value||'';
+  var filtered=allPending.filter(function(j){
+    if(!q) return true;
+    var lq=q.toLowerCase();
+    return (j.company&&j.company.toLowerCase().includes(lq))||(j.url&&j.url.toLowerCase().includes(lq))||(j.title&&j.title.toLowerCase().includes(lq));
+  });
+  var tbody=document.getElementById('pending-tbody');
+  var empty=document.getElementById('pending-empty');
+  var table=document.getElementById('pending-table');
+  if(filtered.length===0){table.style.display='none';empty.classList.remove('hidden');}
+  else{table.style.display='';empty.classList.add('hidden');}
+  tbody.innerHTML=filtered.map(function(j){
+    var badge='<span class="source-badge '+sourceClass(j.source)+'">'+esc(j.source)+'</span>';
+    var company=j.company?'<strong>'+esc(j.company)+'</strong>':'<span class="small-text">&mdash;</span>';
+    var title=j.title?'<div class="small-text trunc" style="max-width:320px" title="'+esc(j.title)+'">'+esc(j.title)+'</div>':'';
+    var shortUrl=j.url.replace(/^https?:\/\//,'').slice(0,60)+(j.url.replace(/^https?:\/\//,'').length>60?'…':'');
+    var urlCell='<a href="'+esc(j.url)+'" target="_blank" rel="noopener" class="small-text trunc" style="max-width:340px;display:inline-block" title="'+esc(j.url)+'">'+esc(shortUrl)+'</a>'+title;
+    var actions='<a href="'+esc(j.url)+'" target="_blank" rel="noopener" class="open-btn">Open</a>';
+    return '<tr><td>'+badge+'</td><td>'+company+'</td><td>'+urlCell+'</td><td>'+actions+'</td></tr>';
+  }).join('');
+}
+function updateTabCounts() {
+  var pt=document.getElementById('tab-pipeline');
+  var pdt=document.getElementById('tab-pending');
+  if(pt) pt.textContent='Pipeline ('+allApps.length+')';
+  if(pdt) pdt.textContent='Pending ('+allPending.length+')';
+  var cnt=document.getElementById('pending-count');
+  if(cnt) cnt.textContent=allPending.length+' pending jobs — open to review, then evaluate promising ones with Claude Code';
 }
 function setFilter(f, el) {
   currentFilter = f;
@@ -310,7 +389,7 @@ function filterApps(apps) {
     case 'evaluated': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='evaluated';});
     case 'applied': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='applied';});
     case 'interview': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='interview';});
-    case 'top': return apps.filter(function(a){return a.score!==null&&a.score>=4.0;});
+    case 'top': return apps.filter(function(a){return a.score!==null&&a.score>=3.5;});
     case 'skip': return apps.filter(function(a){return a.status&&['skip','discarded','rejected'].includes(a.status.toLowerCase());});
     default: return apps;
   }
@@ -327,7 +406,20 @@ function renderTable() {
   var tbody=document.getElementById('apps-tbody');
   var empty=document.getElementById('empty-state');
   var table=document.getElementById('apps-table');
-  if(sorted.length===0){table.style.display='none';empty.classList.remove('hidden');return;}
+  if(sorted.length===0){
+    table.style.display='none';
+    empty.classList.remove('hidden');
+    var msg=document.getElementById('empty-state-msg');
+    var sub=document.getElementById('empty-state-sub');
+    if(currentFilter!=='all'){
+      if(msg) msg.textContent='No jobs match this filter';
+      if(sub) sub.innerHTML='Try a different filter or add more evaluations';
+    } else {
+      if(msg) msg.textContent='No applications yet';
+      if(sub) sub.innerHTML='Run <code>npm run scan</code> and evaluate some jobs first';
+    }
+    return;
+  }
   table.style.display='';
   empty.classList.add('hidden');
   tbody.innerHTML=sorted.map(function(app){
@@ -437,8 +529,9 @@ function renderProgress(){
   }).join('');
 }
 document.addEventListener('click',function(){document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});openDropdownNum=null;});
-fetch('/api/dashboard/applications').then(function(r){return r.json();}).then(function(data){allApps=data;renderTable();}).catch(function(err){console.error(err);document.getElementById('empty-state').classList.remove('hidden');document.getElementById('apps-table').style.display='none';});
+fetch('/api/dashboard/applications').then(function(r){return r.json();}).then(function(data){allApps=data;renderTable();updateTabCounts();}).catch(function(err){console.error(err);document.getElementById('empty-state').classList.remove('hidden');document.getElementById('apps-table').style.display='none';});
 fetch('/api/dashboard/metrics').then(function(r){return r.json();}).then(function(data){metrics=data;}).catch(function(err){console.error(err);});
+fetch('/api/dashboard/pipeline').then(function(r){return r.json();}).then(function(data){allPending=data;updateTabCounts();}).catch(function(err){console.error(err);});
 </script>
 </body>
 </html>

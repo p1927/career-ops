@@ -379,6 +379,56 @@ app.get('/api/dashboard/metrics', (req, res) => {
   } catch (err) { console.error('[dashboard/metrics]', err.message); res.status(500).json({ error: err.message }); }
 });
 
+// ── GET /api/dashboard/pipeline ───────────────────────────────────────────
+
+app.get('/api/dashboard/pipeline', (req, res) => {
+  try {
+    const p = join(ROOT, 'data', 'pipeline.md');
+    if (!existsSync(p)) return res.json([]);
+    const lines = readFileSync(p, 'utf-8').split('\n');
+    const results = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Match lines like: - [ ] URL | Company | Title  OR  - URL  OR  URL
+      const urlMatch = trimmed.match(/(?:^-\s*(?:\[\s*[x\s]?\s*\]\s*)?)(https?:\/\/[^\s|]+)/i)
+        || trimmed.match(/^(https?:\/\/[^\s|]+)/i);
+      if (!urlMatch) continue;
+      const url = urlMatch[1].trim();
+      // Extract company and title from pipe-separated metadata if present
+      let company = null, title = null;
+      const pipeIdx = line.indexOf(url) + url.length;
+      const rest = line.slice(pipeIdx);
+      const pipeParts = rest.split('|').map(s => s.trim()).filter(Boolean);
+      if (pipeParts.length >= 1) company = pipeParts[0] || null;
+      if (pipeParts.length >= 2) title = pipeParts[1] || null;
+      // Determine source from hostname
+      let source = 'direct';
+      try {
+        const host = new URL(url).hostname.replace(/^www\./, '');
+        if (host.includes('ashby.io')) source = 'ashby';
+        else if (host.includes('greenhouse.io')) source = 'greenhouse';
+        else if (host.includes('lever.co')) source = 'lever';
+        else if (host.includes('linkedin.com')) source = 'linkedin';
+        else if (host.includes('remotive.com') || host.includes('remotive.io')) source = 'remotive';
+        else if (host.includes('wellfound.com') || host.includes('angel.co')) source = 'wellfound';
+        // Extract company from URL path if not already in metadata
+        if (!company) {
+          const pathname = new URL(url).pathname;
+          const segments = pathname.split('/').filter(Boolean);
+          if (source === 'ashby' || source === 'greenhouse' || source === 'lever') {
+            company = segments[0] || null;
+          } else {
+            const sub = new URL(url).hostname.split('.')[0];
+            if (sub && sub !== 'www' && sub !== 'boards' && sub !== 'jobs') company = sub;
+          }
+        }
+      } catch (_) {}
+      results.push({ url, source, company, title });
+    }
+    res.json(results);
+  } catch (err) { console.error('[dashboard/pipeline]', err.message); res.json([]); }
+});
+
 // ── Start ──────────────────────────────────────────────────────────────────
 
 const BASE_PORT = parseInt(process.env.SETUP_PORT || '4737', 10);
