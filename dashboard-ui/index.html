@@ -372,7 +372,7 @@ function sortBy(field) {
   document.querySelectorAll('th').forEach(function(th){
     th.classList.remove('sorted');
     var ind=th.querySelector('.sort-ind');
-    if(ind) ind.textContent='\\u2195';
+    if(ind) ind.textContent='↕';
   });
   var hdrs={num:0,date:1,company:2,score:4};
   var idx=hdrs[field];
@@ -380,7 +380,7 @@ function sortBy(field) {
     var th=document.querySelectorAll('th')[idx];
     th.classList.add('sorted');
     var ind=th.querySelector('.sort-ind');
-    if(ind) ind.textContent=sortDir===1?'\\u25b2':'\\u25bc';
+    if(ind) ind.textContent=sortDir===1?'▲':'▼';
   }
   renderTable();
 }
@@ -431,7 +431,7 @@ function renderTable() {
     var tldr=app.tldr?'<span class="trunc" title="'+esc(app.tldr)+'">'+esc(app.tldr)+'</span>':'<span class="small-text">&mdash;</span>';
     var remote=app.remote?'<span class="small-text trunc" title="'+esc(app.remote)+'">'+esc(app.remote)+'</span>':'<span class="small-text">&mdash;</span>';
     var comp=app.comp?'<span class="small-text trunc" title="'+esc(app.comp)+'">'+esc(app.comp)+'</span>':'<span class="small-text">&mdash;</span>';
-    var pdf=app.hasPDF?'\\u2705':'&mdash;';
+    var pdf=app.hasPDF?'✅':'&mdash;';
     return '<tr onclick="openReport('+app.num+')">'+
       '<td>'+app.num+'</td>'+
       '<td class="small-text">'+esc(app.date)+'</td>'+
@@ -452,7 +452,7 @@ function toggleStatusDropdown(e,num){
   var pill=e.currentTarget;
   var dd=document.createElement('div');
   dd.className='status-dropdown';
-  dd.innerHTML=STATUS_OPTIONS.map(function(s){return '<div onclick="updateStatus('+num+',\\''+s+'\\',event)">'+s+'</div>';}).join('');
+  STATUS_OPTIONS.forEach(function(s){var item=document.createElement('div');item.textContent=s;item.addEventListener('click',function(ev){updateStatus(num,s,ev);});dd.appendChild(item);});
   pill.style.position='relative';
   pill.appendChild(dd);
 }
