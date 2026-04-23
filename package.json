@@ -16,7 +16,7 @@
     "liveness": "node check-liveness.mjs",
     "scan": "node scan.mjs",
     "gemini:eval": "node gemini-eval.mjs",
-    "minimax:eval": "node minimax-eval.mjs"
+    "setup": "node setup-server.mjs"
   },
   "keywords": [
     "ai",
@@ -34,8 +34,13 @@
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "express": "^4.21.2",
     "js-yaml": "^4.1.1",
+    "mammoth": "^1.9.0",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
     "playwright": "^1.58.1"
   }
 }
