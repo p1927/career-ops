@@ -20,7 +20,7 @@ const ROOT = __dirname; // career-ops project root
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:4737' }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(join(__dirname, 'setup-ui')));
 
@@ -30,7 +30,7 @@ function readYaml(relPath, fallback = {}) {
   const p = join(ROOT, relPath);
   if (!existsSync(p)) return fallback;
   try { return yaml.load(readFileSync(p, 'utf-8')) || fallback; }
-  catch { return fallback; }
+  catch (err) { console.error('[readYaml] parse error in', relPath, err.message); return fallback; }
 }
 
 function writeYaml(relPath, data) {
@@ -100,6 +100,9 @@ app.get('/api/profile', (req, res) => {
 });
 
 app.post('/api/profile/save', (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Expected a plain object' });
+  }
   writeYaml('config/profile.yml', req.body);
   res.json({ ok: true });
 });
@@ -109,9 +112,10 @@ app.post('/api/profile/fetch-linkedin', async (req, res) => {
   if (!url || !url.includes('linkedin.com')) {
     return res.status(400).json({ error: 'Invalid LinkedIn URL' });
   }
+  let browser;
   try {
     const { chromium } = await import('playwright');
-    const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+    browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
     const ctx = await browser.newContext({
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       locale: 'en-US',
@@ -126,7 +130,6 @@ app.post('/api/profile/fetch-linkedin', async (req, res) => {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => { blocked = true; });
 
     if (blocked || page.url().includes('/authwall') || page.url().includes('/login')) {
-      await browser.close();
       return res.json({ partial: true, blocked: true });
     }
 
@@ -146,8 +149,6 @@ app.post('/api/profile/fetch-linkedin', async (req, res) => {
     const companies = await getAll('.experience-item__subtitle span, .t-14.t-normal span');
     const skills = await getAll('.pv-skill-category-entity__name-text, .skill-categories-section span');
 
-    await browser.close();
-
     res.json({
       partial: !name,
       name,
@@ -159,6 +160,8 @@ app.post('/api/profile/fetch-linkedin', async (req, res) => {
     });
   } catch (err) {
     res.json({ partial: true, error: err.message });
+  } finally {
+    await browser?.close();
   }
 });
 
@@ -206,14 +209,14 @@ app.post('/api/portals/save', (req, res) => {
 
 // ── Start ──────────────────────────────────────────────────────────────────
 
-const BASE_PORT = parseInt(process.env.SETUP_PORT || '4737');
+const BASE_PORT = parseInt(process.env.SETUP_PORT || '4737', 10);
 function tryListen(port, attempts = 3) {
   const server = createServer(app);
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE' && attempts > 1) tryListen(port + 1, attempts - 1);
     else { console.error('Failed to start server:', err.message); process.exit(1); }
   });
-  server.listen(port, '0.0.0.0', () => {
+  server.listen(port, '127.0.0.1', () => {
     console.log(`\n  Career-Ops Setup UI\n  → http://localhost:${port}\n`);
   });
 }
