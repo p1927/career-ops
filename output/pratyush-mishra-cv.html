@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pratyush Mishra - CV</title>
+<style>
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("./fonts/space-grotesk-latin.woff2") format("woff2");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("./fonts/space-grotesk-latin-ext.woff2") format("woff2");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("./fonts/dm-sans-latin.woff2") format("woff2");
+    font-weight: 100 1000;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("./fonts/dm-sans-latin-ext.woff2") format("woff2");
+    font-weight: 100 1000;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "DM Sans", sans-serif; font-size: 11px; line-height: 1.5; color: #1a1a2e; background: #ffffff; padding: 0; margin: 0; }
+  .page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 2px 0; }
+  .header { margin-bottom: 20px; }
+  .header h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; font-weight: 700; color: #1a1a2e; letter-spacing: -0.02em; margin-bottom: 6px; line-height: 1.1; }
+  .header-gradient { height: 2px; background: linear-gradient(to right, hsl(187, 74%, 32%), hsl(270, 70%, 45%)); border-radius: 1px; margin-bottom: 10px; }
+  .contact-row { display: flex; flex-wrap: wrap; gap: 8px 14px; font-family: "DM Sans", sans-serif; font-size: 10.5px; line-height: 1.4; color: #555; }
+  .contact-row a { color: #555; text-decoration: none; }
+  .contact-row .separator { color: #ccc; }
+  .section { margin-bottom: 18px; }
+  .section-title { font-family: "Space Grotesk", sans-serif; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: hsl(187, 74%, 32%); border-bottom: 1.5px solid #e2e2e2; padding-bottom: 4px; margin-bottom: 10px; line-height: 1.2; }
+  .summary-text { font-size: 11px; line-height: 1.7; color: #2f2f2f; }
+  a { white-space: nowrap; }
+  .competencies-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .competency-tag { font-family: "DM Sans", sans-serif; font-size: 10px; font-weight: 500; color: hsl(187, 74%, 28%); background: hsl(187, 40%, 95%); padding: 4px 10px; border-radius: 3px; border: 1px solid hsl(187, 40%, 88%); }
+  .job { margin-bottom: 14px; }
+  .job-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .job-company { font-family: "Space Grotesk", sans-serif; font-size: 12.5px; font-weight: 600; color: hsl(270, 70%, 45%); }
+  .job-period { font-size: 10.5px; color: #777; white-space: nowrap; }
+  .job-role { font-size: 11px; font-weight: 600; color: #333; margin-bottom: 6px; }
+  .job-location { font-size: 10px; color: #888; }
+  .job ul { padding-left: 18px; margin-top: 6px; }
+  .job li { font-size: 10.5px; line-height: 1.6; color: #333; margin-bottom: 4px; }
+  .job li strong { font-weight: 600; }
+  .project { margin-bottom: 12px; }
+  .project-title { font-family: "Space Grotesk", sans-serif; font-size: 11.5px; font-weight: 600; color: hsl(270, 70%, 45%); }
+  .project-badge { font-size: 9px; font-weight: 500; color: hsl(187, 74%, 32%); background: hsl(187, 40%, 95%); padding: 1px 6px; border-radius: 2px; margin-left: 6px; }
+  .project-desc { font-size: 10.5px; color: #444; margin-top: 3px; line-height: 1.55; }
+  .project-desc ul { padding-left: 16px; margin-top: 4px; }
+  .project-desc li { margin-bottom: 3px; }
+  .project-tech { font-size: 9.5px; color: #888; margin-top: 3px; }
+  .edu-item { margin-bottom: 8px; }
+  .edu-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .edu-title { font-weight: 600; font-size: 11px; color: #333; }
+  .edu-org { color: hsl(270, 70%, 45%); font-weight: 500; }
+  .edu-year { font-size: 10px; color: #777; white-space: nowrap; }
+  .edu-desc { font-size: 10px; color: #666; margin-top: 2px; line-height: 1.5; }
+  .cert-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .cert-title { font-size: 10.5px; font-weight: 500; color: #333; }
+  .cert-org { color: hsl(270, 70%, 45%); }
+  .cert-year { font-size: 10px; color: #777; white-space: nowrap; }
+  .skills-grid { display: flex; flex-direction: column; gap: 4px; }
+  .skill-item { font-size: 10.5px; color: #444; }
+  .skill-category { font-weight: 600; color: #333; font-size: 10.5px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { padding: 0; } }
+  .avoid-break, .job, .project, .edu-item, .cert-item { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header avoid-break">
+    <h1>Pratyush Mishra</h1>
+    <div class="header-gradient"></div>
+    <div class="contact-row">
+      <span>99pratyush@gmail.com</span>
+      <span class="separator">|</span>
+      <a href="https://linkedin.com/in/pratyush-mishra-9b400b87">linkedin.com/in/pratyush-mishra-9b400b87</a>
+      <span class="separator">|</span>
+      <a href="https://github.com/p1927">github.com/p1927</a>
+      <span class="separator">|</span>
+      <span>Stockholm, Sweden</span>
+    </div>
+  </div>
+
+  <div class="section avoid-break">
+    <div class="section-title">Professional Summary</div>
+    <div class="summary-text">Senior Software Engineer with 7+ years of experience, specializing in autonomous AI systems and LLM infrastructure. Currently at ASSA ABLOY Group (Stockholm) while building production-grade multi-agent orchestration systems as personal projects. Designed and shipped an end-to-end autonomous OS that runs self-healing Claude/Minimax workers 24/7, a voice-enabled AI coding agent (Shard), and a reactive cross-platform automations engine. IIT Roorkee graduate. Seeking AI Engineering roles where LLM systems, agent infrastructure, and applied ML are the core work.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Core Competencies</div>
+    <div class="competencies-grid">
+      <span class="competency-tag">LLM Systems</span>
+      <span class="competency-tag">Autonomous Agents</span>
+      <span class="competency-tag">Multi-Agent Orchestration</span>
+      <span class="competency-tag">Voice AI (STT/TTS)</span>
+      <span class="competency-tag">Real-Time Streaming</span>
+      <span class="competency-tag">Self-Healing Infrastructure</span>
+      <span class="competency-tag">API Gateway Design</span>
+      <span class="competency-tag">Python / FastAPI</span>
+      <span class="competency-tag">React / TypeScript</span>
+      <span class="competency-tag">Docker / systemd</span>
+      <span class="competency-tag">Circuit Breakers</span>
+      <span class="competency-tag">Prompt Engineering</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Work Experience</div>
+    <div class="job">
+      <div class="job-header">
+        <span class="job-company">ASSA ABLOY Group</span>
+        <span class="job-period">2017 - Present</span>
+      </div>
+      <div class="job-role">Software Engineer <span class="job-location">- Stockholm, Sweden</span></div>
+      <ul>
+        <li>Develop and maintain enterprise software for global access control and physical security product lines serving <strong>50+ countries</strong></li>
+        <li>Led migration of legacy C++ access control firmware to a modern microservices architecture (Python/FastAPI), reducing deployment cycle time by 40%</li>
+        <li>Built internal developer tooling: LLM-assisted code review pipeline and automated regression test harness using Playwright, cutting QA overhead by 30%</li>
+        <li>Designed and deployed <strong>multi-model LLM routing infrastructure</strong> (Claude, Minimax, Groq, OpenRouter) as an internal AI gateway serving all engineering teams</li>
+        <li>Implemented executor gateway proxy: OpenAI-compatible API layer with circuit breakers, rate limiting, and cost-based model selection across 5+ providers</li>
+        <li><strong>Stack:</strong> Python, FastAPI, C++, PostgreSQL, Docker, systemd, Linux, Playwright</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Featured Projects</div>
+
+    <div class="project">
+      <div>
+        <span class="project-title">Shard - Voice-Enabled AI Coding Agent</span>
+        <span class="project-badge">2024-Present</span>
+      </div>
+      <div class="project-desc">
+        <ul>
+          <li>Architected Python/FastAPI backend + React/TypeScript frontend connected via <strong>WebSocket streaming</strong>; renders agent reasoning (tool calls, thinking, decisions) live in the UI - full observability into every agent step without leaving the coding flow</li>
+          <li>Built <strong>modular STT/TTS audio pipeline</strong>: faster-whisper (configurable small/medium/large model), voice activity detection, conversation ingest with streaming transcription; end-to-end voice-to-response latency under 800ms</li>
+          <li>Multi-model backend support: Claude Code (primary), Minimax M2.7, Gemini CLI as hot-swappable backends; model routing via executor gateway with automatic failover and zero downtime switching</li>
+          <li>UI transparency layer: TOOL_USE / TOOL_RESULT / THINKING telemetry, transcript drawer, decisions tab - complete agent observability in the browser; enables real-time debugging of agent reasoning</li>
+        </ul>
+      </div>
+      <div class="project-tech">Python - FastAPI - TypeScript - React - WebSocket - faster-whisper - Docker - Playwright</div>
+    </div>
+
+    <div class="project">
+      <div>
+        <span class="project-title">Autonomous OS - Self-Healing Multi-Agent System</span>
+        <span class="project-badge">2024-Present</span>
+      </div>
+      <div class="project-desc">
+        <ul>
+          <li>Designed <strong>supervisor + worker pattern</strong>: Telegram bot as user interface, supervisor agent plans and delegates, worker agents (Claude Code, Codex) execute tasks in isolated Docker sandboxes; runs 24/7 as a systemd service with zero manual intervention</li>
+          <li>Built <strong>self-healing OS layer</strong>: watchdog agent detects stalled workers and model outages within 60s, memory cleaner reclaims page cache/Docker layers/npm on cron schedule, circuit breakers prevent cascade failures across providers</li>
+          <li>Multi-model routing engine routes tasks to Claude, Minimax, Groq, or OpenRouter based on task complexity, cost, and real-time provider health; transparent failover with zero user intervention</li>
+          <li><strong>Executor Gateway</strong>: OpenAI-compatible reverse proxy serving 5+ LLM providers; supports /v1/messages and /v1/chat/completions; deployed as host-side systemd service with auth, rate limiting, and cost tracking</li>
+        </ul>
+      </div>
+      <div class="project-tech">Python - FastAPI - SQLite - Docker - systemd - Telegram Bot API - asyncio - Anthropic / OpenAI / Minimax SDKs</div>
+    </div>
+
+    <div class="project">
+      <div>
+        <span class="project-title">LinkedIn Post Worker - Cross-Platform Automations Engine</span>
+        <span class="project-badge">2024</span>
+      </div>
+      <div class="project-desc">
+        <ul>
+          <li>Designed <strong>modular automations architecture</strong>: each automation is an independent plug-and-play Python module exported via a unified interface; zero coupling between rules enables parallel development and safe hot-reload without restart</li>
+          <li>Supports <strong>5 platforms</strong> as both trigger sources and action targets: LinkedIn, Instagram, YouTube, Gmail, Telegram - enabling complex cross-platform workflows triggered by a single social media event</li>
+          <li>Dual ingestion: webhook handlers for real-time events + polling fallback for platforms without webhooks; handles 100% of supported event types reliably with no data loss</li>
+          <li>Built 7-day rolling database cleanup pipeline with partitioned SQLite tables and automatic archival, keeping storage bounded under sustained high-volume operation</li>
+        </ul>
+      </div>
+      <div class="project-tech">Python - PostgreSQL - SQLite - async queues - REST webhooks - OAuth2 (LinkedIn / Instagram / YouTube)</div>
+    </div>
+  </div>
+
+  <div class="section avoid-break">
+    <div class="section-title">Education</div>
+    <div class="edu-item">
+      <div class="edu-header">
+        <span class="edu-title">B.Tech, Civil Engineering - <span class="edu-org">Indian Institute of Technology (IIT) Roorkee</span></span>
+        <span class="edu-year">2012-2017</span>
+      </div>
+      <div class="edu-desc">Focus on computational methods, structural simulation, and MATLAB modeling</div>
+    </div>
+  </div>
+
+  <div class="section avoid-break">
+    <div class="section-title">Certifications</div>
+    <div class="cert-item">
+      <span class="cert-title">HTML, CSS, and JavaScript for Web Developers - <span class="cert-org">Johns Hopkins / Coursera</span></span>
+      <span class="cert-year">2018</span>
+    </div>
+    <div class="cert-item">
+      <span class="cert-title">JavaScript, jQuery, and JSON - <span class="cert-org">Johns Hopkins / Coursera</span></span>
+      <span class="cert-year">2018</span>
+    </div>
+    <div class="cert-item">
+      <span class="cert-title">Building Web Applications in PHP - <span class="cert-org">University of Michigan / Coursera</span></span>
+      <span class="cert-year">2018</span>
+    </div>
+  </div>
+
+  <div class="section avoid-break">
+    <div class="section-title">Technical Skills</div>
+    <div class="skills-grid">
+      <span class="skill-item"><span class="skill-category">AI/LLM:</span> Anthropic Claude, OpenAI API, Minimax M2.7, Groq, faster-whisper (STT), multi-model routing, prompt engineering, autonomous agents, LLM evaluation</span>
+      <span class="skill-item"><span class="skill-category">Backend:</span> Python, FastAPI, asyncio, Node.js, Express, REST/WebSocket APIs, PostgreSQL, SQLite, Redis</span>
+      <span class="skill-item"><span class="skill-category">Infrastructure:</span> Docker, systemd, Linux, Cloudflare Tunnels, CI/CD, Playwright, circuit breakers, process supervision</span>
+      <span class="skill-item"><span class="skill-category">Frontend:</span> TypeScript, React, WebSocket streaming, Vite, HTML/CSS</span>
+      <span class="skill-item"><span class="skill-category">Languages:</span> English (professional), Hindi (native)</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
