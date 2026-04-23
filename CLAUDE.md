@@ -365,3 +365,66 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 - No markdown bold (`**`) in status field
 - No dates in status field (use the date column)
 - No extra text (use the notes column)
+
+
+---
+
+## Minimax / Executor-Gateway Setup (openclaw-sandbox fork)
+
+This fork is configured to use **MiniMax M2.7** via the local executor-gateway
+instead of the default Claude API. All routing is handled by environment variables
+already set in the `openclaw-sandbox` container — no API keys to manage.
+
+### Environment Variables (set in sandbox)
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `OPENAI_BASE_URL` | `http://host.docker.internal:8765/v1` | Executor gateway endpoint |
+| `OPENAI_API_KEY` | `sk-executor-gateway` | Gateway auth token |
+| `CLAUDE_CODE_MODEL` | `minimax/MiniMax-M2.7` | Model used by `claude -p` batch workers |
+| `EXECUTOR_GATEWAY_BASE` | `http://host.docker.internal:8765` | Base URL for non-/v1 gateway calls |
+
+### Minimax Evaluator
+
+A standalone evaluator script is available that calls the executor gateway directly
+using the OpenAI-compatible API (no SDK dependency):
+
+```bash
+# Evaluate a JD inline
+node minimax-eval.mjs "We are looking for a Senior AI Engineer..."
+
+# Evaluate from a file
+node minimax-eval.mjs --file ./jds/openai-swe.txt
+
+# npm shortcut
+npm run minimax:eval -- "paste JD here"
+```
+
+The script reads the same `modes/_shared.md`, `modes/oferta.md`, and `cv.md` files
+as the Gemini and Claude evaluators. Reports are saved to `reports/` in the same format.
+
+### Batch Processing
+
+`batch/batch-runner.sh` uses `claude -p` workers. The env vars above automatically
+route all `claude -p` calls through executor-gateway to MiniMax M2.7. No script
+changes are needed.
+
+### Job Board Scanning (LinkedIn, Remotive, Wellfound)
+
+`scan.mjs` has been extended with three additional portal types:
+
+- **LinkedIn** — fetches the LinkedIn Jobs guest JSON feed (last 24h, public endpoint).
+  Configure queries in `portals.yml` under `portal_queries` with `type: linkedin`.
+  Note: LinkedIn may rate-limit aggressive polling; keep scan intervals >= 12h.
+- **Remotive** — clean JSON API at `https://remotive.com/api/remote-jobs`. Zero auth required.
+  Configure with `type: remotive` in `portal_queries`.
+- **Wellfound** — scrapes the public Wellfound search page. Best-effort HTML parsing;
+  results may be limited without authentication. Configure with `type: wellfound`.
+
+Add company-level LinkedIn scanning by setting `careers_url` to a LinkedIn company URL:
+
+```yaml
+- name: My Company
+  careers_url: https://www.linkedin.com/company/my-company/jobs
+  enabled: true
+```

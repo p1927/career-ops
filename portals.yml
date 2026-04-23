@@ -1,0 +1,282 @@
+# portals.yml — Career-Ops Portal Scanner Configuration
+# Adapted for Minimax/executor-gateway setup in openclaw-sandbox.
+#
+# Supports: Greenhouse, Ashby, Lever (ATS APIs)
+#           LinkedIn jobs guest feed, Remotive API, Wellfound search
+#
+# Usage: node scan.mjs
+
+# ── Title filter ─────────────────────────────────────────────────────────────
+# At least 1 positive must match AND 0 negatives must match (case-insensitive).
+
+title_filter:
+  positive:
+    # AI/ML roles
+    - "AI"
+    - "ML"
+    - "LLM"
+    - "Agent"
+    - "Agentic"
+    - "GenAI"
+    - "Generative AI"
+    - "NLP"
+    - "LLMOps"
+    - "MLOps"
+    - "Voice AI"
+    - "Conversational AI"
+    - "Machine Learning"
+    - "Applied AI"
+    - "AI Engineer"
+    - "AI Research"
+    # Engineering roles
+    - "Platform Engineer"
+    - "Solutions Architect"
+    - "Solutions Engineer"
+    - "Staff Engineer"
+    - "Principal Engineer"
+    - "Forward Deployed"
+    - "Customer Engineer"
+    - "Integration Engineer"
+    # Product / Automation
+    - "Product Manager"
+    - "Technical PM"
+    - "Automation"
+    - "GTM Engineer"
+    - "Internal Tools"
+  negative:
+    - "Junior"
+    - "Intern"
+    - ".NET"
+    - "Java "
+    - "iOS"
+    - "Android"
+    - "PHP"
+    - "Ruby"
+
+# ── Portal-level queries ──────────────────────────────────────────────────────
+# These scan broad job boards rather than individual company pages.
+# Runs after tracked_companies. Disable any you don't want.
+
+portal_queries:
+
+  # Remotive — remote-first jobs, clean JSON API
+  - type: remotive
+    search_query: "AI engineer"
+    limit: 50
+    enabled: true
+
+  - type: remotive
+    search_query: "machine learning"
+    limit: 50
+    enabled: true
+
+  - type: remotive
+    search_query: "LLM"
+    limit: 30
+    enabled: true
+
+  # LinkedIn — public guest feed (last 24h, f_TPR=r86400)
+  # Note: LinkedIn may throttle repeated requests. Keep scan interval >= 12h.
+  - type: linkedin
+    search_query: "AI engineer"
+    location: "Worldwide"
+    enabled: true
+
+  - type: linkedin
+    search_query: "LLM engineer"
+    location: "Remote"
+    enabled: true
+
+  - type: linkedin
+    search_query: "machine learning engineer"
+    location: "Remote"
+    enabled: true
+
+  # Wellfound (AngelList) — startup-focused
+  # Note: Returns HTML; results may be limited without authentication.
+  - type: wellfound
+    search_query: "ai-engineer"
+    enabled: true
+
+  - type: wellfound
+    search_query: "machine-learning"
+    enabled: true
+
+# ── Tracked companies (ATS-direct, zero tokens) ───────────────────────────────
+# Add linkedin_company_id for LinkedIn company-page scanning.
+
+tracked_companies:
+
+  # ── AI Labs ──────────────────────────────────────────────────────────────
+
+  - name: OpenAI
+    careers_url: https://job-boards.greenhouse.io/openai
+    enabled: true
+
+  - name: Anthropic
+    careers_url: https://job-boards.greenhouse.io/anthropic
+    enabled: true
+
+  - name: Mistral AI
+    careers_url: https://jobs.ashbyhq.com/mistral
+    enabled: true
+
+  - name: Cohere
+    careers_url: https://jobs.lever.co/cohere
+    enabled: true
+
+  - name: Inflection AI
+    careers_url: https://jobs.ashbyhq.com/inflection
+    enabled: true
+
+  - name: AI21 Labs
+    careers_url: https://jobs.ashbyhq.com/ai21labs
+    enabled: true
+
+  - name: Adept AI
+    careers_url: https://jobs.ashbyhq.com/adept
+    enabled: true
+
+  - name: Stability AI
+    careers_url: https://jobs.lever.co/stability-ai
+    enabled: true
+
+  # ── Big Tech AI teams ─────────────────────────────────────────────────────
+
+  - name: Google DeepMind
+    careers_url: https://job-boards.greenhouse.io/deepmind
+    enabled: true
+
+  - name: Meta AI
+    careers_url: https://job-boards.greenhouse.io/meta
+    enabled: false  # Meta uses Workday — no public API, enable only if you have a direct API URL
+
+  - name: Microsoft Research
+    careers_url: https://job-boards.greenhouse.io/microsoft
+    enabled: false  # Microsoft uses proprietary ATS — placeholder
+
+  # ── MLOps / AI Infrastructure ─────────────────────────────────────────────
+
+  - name: Weights & Biases
+    careers_url: https://job-boards.greenhouse.io/wandb
+    enabled: true
+
+  - name: Hugging Face
+    careers_url: https://job-boards.greenhouse.io/huggingface
+    enabled: true
+
+  - name: Replicate
+    careers_url: https://jobs.ashbyhq.com/replicate
+    enabled: true
+
+  - name: Modal Labs
+    careers_url: https://jobs.ashbyhq.com/modal-labs
+    enabled: true
+
+  - name: Together AI
+    careers_url: https://job-boards.greenhouse.io/togetherai
+    enabled: true
+
+  - name: Baseten
+    careers_url: https://jobs.lever.co/baseten
+    enabled: true
+
+  - name: Anyscale
+    careers_url: https://job-boards.greenhouse.io/anyscale
+    enabled: true
+
+  - name: BentoML
+    careers_url: https://jobs.ashbyhq.com/bentoml
+    enabled: true
+
+  # ── AI Applications / Vertical AI ─────────────────────────────────────────
+
+  - name: Glean
+    careers_url: https://job-boards.greenhouse.io/glean
+    enabled: true
+
+  - name: Moveworks
+    careers_url: https://job-boards.greenhouse.io/moveworks
+    enabled: true
+
+  - name: Jasper AI
+    careers_url: https://jobs.lever.co/jasperai
+    enabled: true
+
+  - name: Harvey AI
+    careers_url: https://job-boards.greenhouse.io/harveyai
+    enabled: true
+
+  - name: Imbue
+    careers_url: https://jobs.ashbyhq.com/imbue
+    enabled: true
+
+  - name: Cognition AI
+    careers_url: https://jobs.ashbyhq.com/cognition
+    enabled: true
+
+  - name: Sierra
+    careers_url: https://jobs.ashbyhq.com/sierra
+    enabled: true
+
+  # ── Developer Tools / AI-first Platforms ──────────────────────────────────
+
+  - name: Cursor
+    careers_url: https://jobs.ashbyhq.com/cursor
+    enabled: true
+
+  - name: Vercel
+    careers_url: https://job-boards.greenhouse.io/vercel
+    enabled: true
+
+  - name: Replit
+    careers_url: https://job-boards.greenhouse.io/replit
+    enabled: true
+
+  - name: Linear
+    careers_url: https://jobs.ashbyhq.com/linear
+    enabled: true
+
+  - name: Sourcegraph
+    careers_url: https://job-boards.greenhouse.io/sourcegraph
+    enabled: true
+
+  - name: Codeium
+    careers_url: https://jobs.ashbyhq.com/codeium
+    enabled: true
+
+  # ── Data & Analytics ──────────────────────────────────────────────────────
+
+  - name: Databricks
+    careers_url: https://job-boards.greenhouse.io/databricks
+    enabled: true
+
+  - name: dbt Labs
+    careers_url: https://job-boards.greenhouse.io/dbtlabs
+    enabled: true
+
+  - name: Hex
+    careers_url: https://job-boards.greenhouse.io/hex
+    enabled: true
+
+  - name: Motherduck
+    careers_url: https://jobs.ashbyhq.com/motherduck
+    enabled: true
+
+  # ── Infrastructure / Cloud ────────────────────────────────────────────────
+
+  - name: Cloudflare
+    careers_url: https://job-boards.greenhouse.io/cloudflare
+    enabled: true
+
+  - name: Fly.io
+    careers_url: https://jobs.lever.co/fly
+    enabled: true
+
+  - name: Railway
+    careers_url: https://jobs.ashbyhq.com/railway
+    enabled: true
+
+  - name: Render
+    careers_url: https://jobs.lever.co/render
+    enabled: true

@@ -3,8 +3,9 @@
 /**
  * scan.mjs — Zero-token portal scanner
  *
- * Fetches Greenhouse, Ashby, and Lever APIs directly, applies title
- * filters from portals.yml, deduplicates against existing history,
+ * Fetches Greenhouse, Ashby, Lever, LinkedIn Jobs (guest API),
+ * Remotive, and Wellfound APIs directly, applies title filters
+ * from portals.yml, deduplicates against existing history,
  * and appends new offers to pipeline.md + scan-history.tsv.
  *
  * Zero Claude API tokens — pure HTTP + JSON.
@@ -13,6 +14,12 @@
  *   node scan.mjs                  # scan all enabled companies
  *   node scan.mjs --dry-run        # preview without writing files
  *   node scan.mjs --company Cohere # scan a single company
+ *
+ * Portal types supported:
+ *   greenhouse, ashby, lever        — ATS direct APIs (structured)
+ *   linkedin                        — LinkedIn jobs guest JSON feed
+ *   remotive                        — Remotive remote jobs API
+ *   wellfound                       — Wellfound (AngelList) public search
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
@@ -30,7 +37,14 @@ const APPLICATIONS_PATH = 'data/applications.md';
 mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 15_000;
+
+// Common browser-like headers to avoid 403s on public feeds
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; career-ops-scanner/1.0)',
+  'Accept': 'application/json, text/html, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
 
 // ── API detection ───────────────────────────────────────────────────
 
@@ -69,6 +83,41 @@ function detectApi(company) {
     };
   }
 
+  // LinkedIn company jobs page → guest JSON feed
+  // careers_url: https://www.linkedin.com/company/openai/jobs
+  const linkedinMatch = url.match(/linkedin\.com\/company\/([^/?#]+)/);
+  if (linkedinMatch) {
+    const keywords = encodeURIComponent(company.search_query || company.name);
+    const location = encodeURIComponent(company.location || '');
+    return {
+      type: 'linkedin',
+      url: `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${keywords}&location=${location}&f_C=${company.linkedin_company_id || ''}&start=0`,
+      companyName: company.name,
+    };
+  }
+
+  // Wellfound / AngelList
+  // careers_url: https://wellfound.com/company/openai/jobs
+  const wellfoundMatch = url.match(/wellfound\.com\/company\/([^/?#]+)/);
+  if (wellfoundMatch) {
+    const role = encodeURIComponent(company.search_query || '');
+    return {
+      type: 'wellfound',
+      url: `https://wellfound.com/jobs/search?jobType=full-time&role=${role}`,
+      companySlug: wellfoundMatch[1],
+      companyName: company.name,
+    };
+  }
+
+  // Remotive — used for portal-level entries (search_query required)
+  if (url.includes('remotive.com') || company.type === 'remotive') {
+    const query = encodeURIComponent(company.search_query || '');
+    return {
+      type: 'remotive',
+      url: `https://remotive.com/api/remote-jobs?search=${query}&limit=50`,
+    };
+  }
+
   return null;
 }
 
@@ -104,7 +153,85 @@ function parseLever(json, companyName) {
   }));
 }
 
-const PARSERS = { greenhouse: parseGreenhouse, ashby: parseAshby, lever: parseLever };
+/**
+ * LinkedIn guest API returns HTML fragments (list items), not JSON.
+ * We extract job cards via regex on the HTML response.
+ * Note: LinkedIn may return 429/999 on aggressive polling — keep
+ * scan intervals reasonable (hourly or less frequent).
+ */
+function parseLinkedin(html, companyName) {
+  if (!html || typeof html !== 'string') return [];
+  const jobs = [];
+  // Each job card: <a ... href="https://www.linkedin.com/jobs/view/..." ...>title text</a>
+  const linkRe = /href="(https:\/\/www\.linkedin\.com\/jobs\/view\/[^"]+)"/g;
+  const titleRe = /<h3[^>]*class="[^"]*base-search-card__title[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/h3>/g;
+  const locationRe = /<span[^>]*class="[^"]*job-search-card__location[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/span>/g;
+
+  const links = [...html.matchAll(linkRe)].map(m => m[1].split('?')[0]);
+  const titles = [...html.matchAll(titleRe)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+  const locations = [...html.matchAll(locationRe)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+
+  for (let i = 0; i < Math.min(links.length, titles.length); i++) {
+    jobs.push({
+      title: titles[i] || '',
+      url: links[i] || '',
+      company: companyName,
+      location: locations[i] || '',
+    });
+  }
+  return jobs;
+}
+
+/**
+ * Wellfound returns HTML — we extract job listings from the page.
+ * This is best-effort; their SPA rendering may limit results.
+ * Authenticated API would yield better results but requires login.
+ */
+function parseWellfound(html, companyName) {
+  if (!html || typeof html !== 'string') return [];
+  const jobs = [];
+  // Job links pattern: /jobs/{id}-{slug}
+  const re = /href="(\/jobs\/\d+-[^"?]+)"/g;
+  const titleRe = /<div[^>]*data-test="StartupResult"[^>]*>[\s\S]*?<a[^>]*href="\/jobs\/[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
+
+  // Simple fallback: extract job URLs and use slug as title
+  const seen = new Set();
+  for (const m of html.matchAll(re)) {
+    const path = m[1];
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const slug = path.replace(/\/jobs\/\d+-/, '').replace(/-/g, ' ');
+    jobs.push({
+      title: slug,
+      url: `https://wellfound.com${path}`,
+      company: companyName,
+      location: 'Remote',
+    });
+  }
+  return jobs;
+}
+
+/**
+ * Remotive API returns clean JSON.
+ */
+function parseRemotive(json, companyName) {
+  const jobs = json.jobs || [];
+  return jobs.map(j => ({
+    title: j.title || '',
+    url: j.url || '',
+    company: j.company_name || companyName,
+    location: j.candidate_required_location || 'Remote',
+  }));
+}
+
+const PARSERS = {
+  greenhouse: parseGreenhouse,
+  ashby: parseAshby,
+  lever: parseLever,
+  linkedin: parseLinkedin,
+  wellfound: parseWellfound,
+  remotive: parseRemotive,
+};
 
 // ── Fetch with timeout ──────────────────────────────────────────────
 
@@ -115,6 +242,21 @@ async function fetchJson(url) {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchHtml(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: BROWSER_HEADERS,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
   } finally {
     clearTimeout(timer);
   }
@@ -247,6 +389,57 @@ async function parallelFetch(tasks, limit) {
   return results;
 }
 
+// ── Portal-level scanning (LinkedIn search queries, Remotive, etc.) ──
+
+async function scanPortalQueries(config, titleFilter, seenUrls, seenCompanyRoles, date, newOffers, errors) {
+  const queries = config.portal_queries || [];
+  if (queries.length === 0) return;
+
+  console.log(`\nScanning ${queries.length} portal queries (LinkedIn, Remotive, Wellfound)...`);
+
+  for (const q of queries) {
+    if (q.enabled === false) continue;
+
+    try {
+      let jobs = [];
+
+      if (q.type === 'remotive') {
+        const search = encodeURIComponent(q.search_query || '');
+        const url = `https://remotive.com/api/remote-jobs?search=${search}&limit=${q.limit || 50}`;
+        const json = await fetchJson(url);
+        jobs = parseRemotive(json, 'Remotive');
+      } else if (q.type === 'linkedin') {
+        const keywords = encodeURIComponent(q.search_query || '');
+        const location = encodeURIComponent(q.location || '');
+        const url = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${keywords}&location=${location}&f_TPR=r86400&start=0`;
+        const html = await fetchHtml(url);
+        jobs = parseLinkedin(html, 'LinkedIn');
+      } else if (q.type === 'wellfound') {
+        const role = encodeURIComponent(q.search_query || '');
+        const url = `https://wellfound.com/jobs/search?jobType=full-time&role=${role}`;
+        const html = await fetchHtml(url);
+        jobs = parseWellfound(html, 'Wellfound');
+      }
+
+      for (const job of jobs) {
+        if (!job.url) continue;
+        if (!titleFilter(job.title)) continue;
+        if (seenUrls.has(job.url)) continue;
+        const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+        if (seenCompanyRoles.has(key)) continue;
+
+        seenUrls.add(job.url);
+        seenCompanyRoles.add(key);
+        newOffers.push({ ...job, source: `${q.type}-query` });
+      }
+
+      console.log(`  [${q.type}] "${q.search_query}" → ${jobs.length} found`);
+    } catch (err) {
+      errors.push({ company: `${q.type}:${q.search_query}`, error: err.message });
+    }
+  }
+}
+
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -292,7 +485,41 @@ async function main() {
   const tasks = targets.map(company => async () => {
     const { type, url } = company._api;
     try {
-      const json = await fetchJson(url);
+      let json;
+      // LinkedIn and Wellfound return HTML, not JSON
+      if (type === 'linkedin') {
+        const html = await fetchHtml(url);
+        const jobs = parseLinkedin(html, company.name);
+        totalFound += jobs.length;
+        for (const job of jobs) {
+          if (!titleFilter(job.title)) { totalFiltered++; continue; }
+          if (seenUrls.has(job.url)) { totalDupes++; continue; }
+          const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+          if (seenCompanyRoles.has(key)) { totalDupes++; continue; }
+          seenUrls.add(job.url);
+          seenCompanyRoles.add(key);
+          newOffers.push({ ...job, source: 'linkedin-api' });
+        }
+        return;
+      }
+
+      if (type === 'wellfound') {
+        const html = await fetchHtml(url);
+        const jobs = parseWellfound(html, company.name);
+        totalFound += jobs.length;
+        for (const job of jobs) {
+          if (!titleFilter(job.title)) { totalFiltered++; continue; }
+          if (seenUrls.has(job.url)) { totalDupes++; continue; }
+          const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+          if (seenCompanyRoles.has(key)) { totalDupes++; continue; }
+          seenUrls.add(job.url);
+          seenCompanyRoles.add(key);
+          newOffers.push({ ...job, source: 'wellfound-api' });
+        }
+        return;
+      }
+
+      json = await fetchJson(url);
       const jobs = PARSERS[type](json, company.name);
       totalFound += jobs.length;
 
@@ -322,13 +549,18 @@ async function main() {
 
   await parallelFetch(tasks, CONCURRENCY);
 
-  // 5. Write results
+  // 5. Scan portal-level queries (LinkedIn search, Remotive, Wellfound search)
+  if (!filterCompany) {
+    await scanPortalQueries(config, titleFilter, seenUrls, seenCompanyRoles, date, newOffers, errors);
+  }
+
+  // 6. Write results
   if (!dryRun && newOffers.length > 0) {
     appendToPipeline(newOffers);
     appendToScanHistory(newOffers, date);
   }
 
-  // 6. Print summary
+  // 7. Print summary
   console.log(`\n${'━'.repeat(45)}`);
   console.log(`Portal Scan — ${date}`);
   console.log(`${'━'.repeat(45)}`);
@@ -341,7 +573,7 @@ async function main() {
   if (errors.length > 0) {
     console.log(`\nErrors (${errors.length}):`);
     for (const e of errors) {
-      console.log(`  ✗ ${e.company}: ${e.error}`);
+      console.log(`  x ${e.company}: ${e.error}`);
     }
   }
 
@@ -357,8 +589,8 @@ async function main() {
     }
   }
 
-  console.log(`\n→ Run /career-ops pipeline to evaluate new offers.`);
-  console.log('→ Share results and get help: https://discord.gg/8pRpHETxa4');
+  console.log(`\n-> Run /career-ops pipeline to evaluate new offers.`);
+  console.log('-> Share results and get help: https://discord.gg/8pRpHETxa4');
 }
 
 main().catch(err => {

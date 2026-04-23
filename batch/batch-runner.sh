@@ -2,6 +2,8 @@
 set -euo pipefail
 
 # career-ops batch runner — standalone orchestrator for claude -p workers
+# Model: MiniMax M2.7 via executor-gateway (OPENAI_BASE_URL=http://host.docker.internal:8765/v1)
+# No changes needed to claude -p invocation — env vars handle routing automatically.
 # Reads batch-input.tsv, delegates each offer to a claude -p worker,
 # tracks state in batch-state.tsv for resumability.
 
