@@ -214,21 +214,19 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
   </div>
   <div class="table-wrap">
     <table id="apps-table">
-      <thead>
-        <tr>
-          <th onclick="sortBy('num')"># <span class="sort-ind">&#x2195;</span></th>
-          <th onclick="sortBy('date')">Date <span class="sort-ind">&#x2195;</span></th>
-          <th onclick="sortBy('company')">Company <span class="sort-ind">&#x2195;</span></th>
-          <th>Role</th>
-          <th onclick="sortBy('score')">Score <span class="sort-ind">&#x2195;</span></th>
-          <th>Status</th>
-          <th>Archetype</th>
-          <th>TL;DR</th>
-          <th>Remote</th>
-          <th>Comp</th>
-          <th>PDF</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th onclick="sortBy('num')"># <span class="sort-ind">&#x2195;</span></th>
+        <th onclick="sortBy('date')">Date <span class="sort-ind">&#x2195;</span></th>
+        <th onclick="sortBy('company')">Company <span class="sort-ind">&#x2195;</span></th>
+        <th>Role</th>
+        <th onclick="sortBy('score')">Score <span class="sort-ind">&#x2195;</span></th>
+        <th>Status</th>
+        <th>Archetype</th>
+        <th>TL;DR</th>
+        <th>Remote</th>
+        <th>Comp</th>
+        <th>PDF</th>
+      </tr></thead>
       <tbody id="apps-tbody"></tbody>
     </table>
   </div>
@@ -241,19 +239,17 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
 <div id="view-pending" class="view">
   <div class="pending-meta">
     <span class="pending-count" id="pending-count">Loading...</span>
-    <input class="pending-search" type="text" id="pending-search" placeholder="Search company or URL..." oninput="renderPending()">
-    <span class="pending-tip">Run <code>node scan.mjs</code> in the sandbox to refresh this list</span>
+    <input class="pending-search" type="text" id="pending-search" placeholder="Search company or title..." oninput="renderPending()">
+    <span class="pending-tip">Run <code>node scan.mjs</code> in the sandbox to refresh</span>
   </div>
   <div class="table-wrap">
     <table id="pending-table">
-      <thead>
-        <tr>
-          <th>Source</th>
-          <th>Company</th>
-          <th>URL</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th style="width:90px">Source</th>
+        <th style="width:130px">Company</th>
+        <th>Title</th>
+        <th style="width:70px">Actions</th>
+      </tr></thead>
       <tbody id="pending-tbody"></tbody>
     </table>
   </div>
@@ -267,18 +263,9 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
   <div class="stat-cards" id="stat-cards"></div>
   <div class="rate-cards" id="rate-cards"></div>
   <div class="progress-grid">
-    <div class="card">
-      <div class="card-title">Funnel</div>
-      <div id="funnel-chart"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Score Distribution</div>
-      <div id="score-chart"></div>
-    </div>
-    <div class="card" style="grid-column: 1 / -1">
-      <div class="card-title">Weekly Activity (last 8 weeks)</div>
-      <div class="weekly-chart" id="weekly-chart"></div>
-    </div>
+    <div class="card"><div class="card-title">Funnel</div><div id="funnel-chart"></div></div>
+    <div class="card"><div class="card-title">Score Distribution</div><div id="score-chart"></div></div>
+    <div class="card" style="grid-column:1/-1"><div class="card-title">Weekly Activity</div><div class="weekly-chart" id="weekly-chart"></div></div>
   </div>
 </div>
 
@@ -289,90 +276,55 @@ tbody tr:hover { background: rgba(124,106,247,.05); }
       <a id="modal-url-btn" class="modal-btn hidden" href="#" target="_blank" rel="noopener">Open Job URL</a>
       <button class="modal-close" onclick="closeModalDirect()">&#x2715;</button>
     </div>
-    <div class="modal-body">
-      <div class="md-content" id="modal-content"></div>
-    </div>
+    <div class="modal-body"><div class="md-content" id="modal-content"></div></div>
   </div>
 </div>
 
 <script>
-var allApps = [], allPending = [], metrics = null, currentFilter = 'all', sortField = 'num', sortDir = 1, openDropdownNum = null;
-var STATUS_OPTIONS = ['Evaluated','Applied','Responded','Interview','Offer','Rejected','Discarded','SKIP'];
-function statusClass(s) {
-  if (!s) return 's-evaluated';
-  var l = s.toLowerCase();
-  if (l==='evaluated') return 's-evaluated';
-  if (l==='applied') return 's-applied';
-  if (l==='interview') return 's-interview';
-  if (l==='offer') return 's-offer';
-  if (l==='responded') return 's-responded';
-  return 's-rejected';
+
+var allApps=[], allPending=[], metrics=null;
+var currentFilter='all', sortField='num', sortDir=1, openDropdownNum=null;
+var STATUS_OPTIONS=['Evaluated','Applied','Responded','Interview','Offer','Rejected','Discarded','SKIP'];
+
+function scoreClass(s){ if(s>=4.0) return 'score-high'; if(s>=3.5) return 'score-mid'; return 'score-low'; }
+function statusClass(s){
+  if(!s) return 's-evaluated';
+  var l=s.toLowerCase();
+  if(l==='evaluated') return 's-evaluated';
+  if(l==='applied') return 's-applied';
+  if(l==='interview') return 's-interview';
+  if(l==='offer') return 's-offer';
+  if(l==='responded') return 's-responded';
+  if(l==='rejected'||l==='discarded'||l==='skip') return 's-skip';
+  return 's-evaluated';
 }
-function scoreClass(s) {
-  if (s===null||s===undefined) return '';
-  if (s>=4.0) return 'score-high';
-  if (s>=3.5) return 'score-mid';
-  return 'score-low';
+function sourceClass(s){
+  var m={'greenhouse':'src-greenhouse','ashby':'src-ashby','lever':'src-lever','linkedin':'src-linkedin','remotive':'src-remotive','wellfound':'src-wellfound'};
+  return m[s]||'src-direct';
 }
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function switchView(name, el) {
+function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function switchView(name, el){
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
   document.querySelectorAll('.topbar .tab').forEach(function(t){t.classList.remove('active');});
   document.getElementById('view-'+name).classList.add('active');
   el.classList.add('active');
-  if (name==='progress'&&metrics) renderProgress();
-  if (name==='pending') renderPending();
+  if(name==='progress' && metrics) renderProgress();
+  if(name==='pending') renderPending();
 }
-function sourceClass(s) {
-  var map={ashby:'src-ashby',greenhouse:'src-greenhouse',lever:'src-lever',linkedin:'src-linkedin',remotive:'src-remotive',wellfound:'src-wellfound',direct:'src-direct'};
-  return map[s]||'src-direct';
-}
-function renderPending() {
-  var q=(document.getElementById('pending-search')||{}).value||'';
-  var filtered=allPending.filter(function(j){
-    if(!q) return true;
-    var lq=q.toLowerCase();
-    return (j.company&&j.company.toLowerCase().includes(lq))||(j.url&&j.url.toLowerCase().includes(lq))||(j.title&&j.title.toLowerCase().includes(lq));
-  });
-  var tbody=document.getElementById('pending-tbody');
-  var empty=document.getElementById('pending-empty');
-  var table=document.getElementById('pending-table');
-  if(filtered.length===0){table.style.display='none';empty.classList.remove('hidden');}
-  else{table.style.display='';empty.classList.add('hidden');}
-  tbody.innerHTML=filtered.map(function(j){
-    var badge='<span class="source-badge '+sourceClass(j.source)+'">'+esc(j.source)+'</span>';
-    var company=j.company?'<strong>'+esc(j.company)+'</strong>':'<span class="small-text">&mdash;</span>';
-    var title=j.title?'<div class="small-text trunc" style="max-width:320px" title="'+esc(j.title)+'">'+esc(j.title)+'</div>':'';
-    var shortUrl=j.url.replace(/^https?:\/\//,'').slice(0,60)+(j.url.replace(/^https?:\/\//,'').length>60?'…':'');
-    var urlCell='<a href="'+esc(j.url)+'" target="_blank" rel="noopener" class="small-text trunc" style="max-width:340px;display:inline-block" title="'+esc(j.url)+'">'+esc(shortUrl)+'</a>'+title;
-    var actions='<a href="'+esc(j.url)+'" target="_blank" rel="noopener" class="open-btn">Open</a>';
-    return '<tr><td>'+badge+'</td><td>'+company+'</td><td>'+urlCell+'</td><td>'+actions+'</td></tr>';
-  }).join('');
-}
-function updateTabCounts() {
-  var pt=document.getElementById('tab-pipeline');
-  var pdt=document.getElementById('tab-pending');
-  if(pt) pt.textContent='Pipeline ('+allApps.length+')';
-  if(pdt) pdt.textContent='Pending ('+allPending.length+')';
-  var cnt=document.getElementById('pending-count');
-  if(cnt) cnt.textContent=allPending.length+' pending jobs — open to review, then evaluate promising ones with Claude Code';
-}
-function setFilter(f, el) {
-  currentFilter = f;
+function setFilter(f, el){
+  currentFilter=f;
   document.querySelectorAll('.ftab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
   renderTable();
 }
-function sortBy(field) {
-  if (sortField===field) sortDir*=-1;
+function sortBy(field){
+  if(sortField===field) sortDir*=-1;
   else { sortField=field; sortDir=1; }
   document.querySelectorAll('th').forEach(function(th){
     th.classList.remove('sorted');
     var ind=th.querySelector('.sort-ind');
-    if(ind) ind.textContent='↕';
+    if(ind) ind.innerHTML='&#x2195;';
   });
   var hdrs={num:0,date:1,company:2,score:4};
   var idx=hdrs[field];
@@ -384,154 +336,192 @@ function sortBy(field) {
   }
   renderTable();
 }
-function filterApps(apps) {
+function filterApps(apps){
   switch(currentFilter){
     case 'evaluated': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='evaluated';});
     case 'applied': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='applied';});
     case 'interview': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='interview';});
-    case 'top': return apps.filter(function(a){return a.score!==null&&a.score>=3.5;});
+    case 'top': return apps.filter(function(a){return a.score!=null&&a.score>=3.5;});
     case 'skip': return apps.filter(function(a){return a.status&&['skip','discarded','rejected'].includes(a.status.toLowerCase());});
     default: return apps;
   }
 }
-function renderTable() {
+function renderTable(){
   var filtered=filterApps(allApps);
   var sorted=filtered.slice().sort(function(a,b){
-    var va=a[sortField],vb=b[sortField];
-    if(sortField==='score'){va=va!==null&&va!==undefined?va:-999;vb=vb!==null&&vb!==undefined?vb:-999;}
-    if(va<vb) return -sortDir;
-    if(va>vb) return sortDir;
-    return 0;
+    var va=a[sortField], vb=b[sortField];
+    if(sortField==='score'){ va=va!=null?va:-999; vb=vb!=null?vb:-999; }
+    if(va<vb) return -sortDir; if(va>vb) return sortDir; return 0;
   });
   var tbody=document.getElementById('apps-tbody');
   var empty=document.getElementById('empty-state');
   var table=document.getElementById('apps-table');
   if(sorted.length===0){
-    table.style.display='none';
-    empty.classList.remove('hidden');
-    var msg=document.getElementById('empty-state-msg');
-    var sub=document.getElementById('empty-state-sub');
-    if(currentFilter!=='all'){
-      if(msg) msg.textContent='No jobs match this filter';
-      if(sub) sub.innerHTML='Try a different filter or add more evaluations';
-    } else {
-      if(msg) msg.textContent='No applications yet';
-      if(sub) sub.innerHTML='Run <code>npm run scan</code> and evaluate some jobs first';
-    }
+    table.style.display='none'; empty.classList.remove('hidden');
+    document.getElementById('empty-state-msg').textContent=currentFilter==='all'?'No applications yet':'No jobs match this filter';
+    document.getElementById('empty-state-sub').style.display=currentFilter==='all'?'':'none';
     return;
   }
-  table.style.display='';
-  empty.classList.add('hidden');
+  table.style.display=''; empty.classList.add('hidden');
   tbody.innerHTML=sorted.map(function(app){
-    var sc=app.score!==null&&app.score!==undefined
-      ?'<span class="score-badge '+scoreClass(app.score)+'">'+(app.scoreRaw||app.score)+'</span>'
+    var sc=app.score!=null
+      ?('<span class="score-badge '+scoreClass(app.score)+'">'+esc(app.scoreRaw||String(app.score))+'</span>')
       :'<span class="small-text">&mdash;</span>';
     var st='<span class="status-pill '+statusClass(app.status)+'" onclick="toggleStatusDropdown(event,'+app.num+')">'+(app.status||'&mdash;')+'</span>';
-    var arch=app.archetype?'<span class="trunc" title="'+esc(app.archetype)+'">'+esc(app.archetype)+'</span>':'<span class="small-text">&mdash;</span>';
-    var tldr=app.tldr?'<span class="trunc" title="'+esc(app.tldr)+'">'+esc(app.tldr)+'</span>':'<span class="small-text">&mdash;</span>';
-    var remote=app.remote?'<span class="small-text trunc" title="'+esc(app.remote)+'">'+esc(app.remote)+'</span>':'<span class="small-text">&mdash;</span>';
-    var comp=app.comp?'<span class="small-text trunc" title="'+esc(app.comp)+'">'+esc(app.comp)+'</span>':'<span class="small-text">&mdash;</span>';
-    var pdf=app.hasPDF?'✅':'&mdash;';
-    return '<tr onclick="openReport('+app.num+')">'+
-      '<td>'+app.num+'</td>'+
-      '<td class="small-text">'+esc(app.date)+'</td>'+
-      '<td><strong>'+esc(app.company)+'</strong></td>'+
-      '<td class="trunc" style="max-width:180px" title="'+esc(app.role)+'">'+esc(app.role)+'</td>'+
-      '<td>'+sc+'</td>'+
-      '<td onclick="event.stopPropagation()">'+st+'</td>'+
-      '<td>'+arch+'</td><td>'+tldr+'</td><td>'+remote+'</td><td>'+comp+'</td>'+
-      '<td style="text-align:center">'+pdf+'</td></tr>';
+    var arch=app.archetype?('<span class="trunc" title="'+esc(app.archetype)+'">'+esc(app.archetype)+'</span>'):'<span class="small-text">&mdash;</span>';
+    var tldr=app.tldr?('<span class="trunc" title="'+esc(app.tldr)+'">'+esc(app.tldr)+'</span>'):'<span class="small-text">&mdash;</span>';
+    var remote=app.remote?('<span class="small-text trunc" title="'+esc(app.remote)+'">'+esc(app.remote)+'</span>'):'<span class="small-text">&mdash;</span>';
+    var comp=app.comp?('<span class="small-text trunc" title="'+esc(app.comp)+'">'+esc(app.comp)+'</span>'):'<span class="small-text">&mdash;</span>';
+    var pdf=app.hasPDF?'✅':'—';
+    return '<tr onclick="openReport('+app.num+')">'
+      +'<td>'+app.num+'</td>'
+      +'<td class="small-text">'+esc(app.date)+'</td>'
+      +'<td><strong>'+esc(app.company)+'</strong></td>'
+      +'<td class="trunc" style="max-width:180px" title="'+esc(app.role)+'">'+esc(app.role)+'</td>'
+      +'<td>'+sc+'</td>'
+      +'<td onclick="event.stopPropagation()">'+st+'</td>'
+      +'<td>'+arch+'</td><td>'+tldr+'</td><td>'+remote+'</td><td>'+comp+'</td>'
+      +'<td style="text-align:center">'+pdf+'</td></tr>';
   }).join('');
   document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});
 }
-function toggleStatusDropdown(e,num){
+
+function toggleStatusDropdown(e, num){
   e.stopPropagation();
   document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});
-  if(openDropdownNum===num){openDropdownNum=null;return;}
+  if(openDropdownNum===num){ openDropdownNum=null; return; }
   openDropdownNum=num;
   var pill=e.currentTarget;
   var dd=document.createElement('div');
   dd.className='status-dropdown';
-  STATUS_OPTIONS.forEach(function(s){var item=document.createElement('div');item.textContent=s;item.addEventListener('click',function(ev){updateStatus(num,s,ev);});dd.appendChild(item);});
+  STATUS_OPTIONS.forEach(function(s){
+    var item=document.createElement('div');
+    item.textContent=s;
+    item.addEventListener('click',function(ev){ updateStatus(num,s,ev); });
+    dd.appendChild(item);
+  });
   pill.style.position='relative';
   pill.appendChild(dd);
 }
-function updateStatus(num,status,e){
+function updateStatus(num, status, e){
   e.stopPropagation();
   document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});
   openDropdownNum=null;
-  fetch('/api/dashboard/applications/'+num+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(function(r){
-    if(r.ok){var app=allApps.find(function(a){return a.num===num;});if(app)app.status=status;renderTable();}
-  }).catch(function(err){console.error(err);});
+  fetch('/api/dashboard/applications/'+num+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})})
+    .then(function(r){ if(r.ok){ var app=allApps.find(function(a){return a.num===num;}); if(app) app.status=status; renderTable(); } })
+    .catch(function(err){ console.error(err); });
 }
+document.addEventListener('click',function(){ document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();}); openDropdownNum=null; });
+
 function openReport(num){
-  fetch('/api/dashboard/report/'+num).then(function(r){if(!r.ok)return null;return r.json();}).then(function(data){
-    if(!data)return;
-    document.getElementById('modal-title').textContent=data.title;
-    var urlMatch=data.markdown.match(/\\*\\*URL[:\\s]*\\*\\*[:\\s]*(https?:\\/\\/[^\\s\\n]+)/i);
-    if(!urlMatch)urlMatch=data.markdown.match(/(https?:\\/\\/[^\\s\\n)]+(?:job|career|greenhouse|lever|workday)[^\\s\\n)]*)/i);
-    var urlBtn=document.getElementById('modal-url-btn');
-    if(urlMatch){urlBtn.href=urlMatch[1]||urlMatch[0];urlBtn.classList.remove('hidden');}
-    else{urlBtn.classList.add('hidden');}
-    var html=(typeof marked!=='undefined')?marked.parse(data.markdown):fallbackMd(data.markdown);
-    document.getElementById('modal-content').innerHTML=html;
-    document.getElementById('modal-overlay').classList.remove('hidden');
-    document.body.style.overflow='hidden';
-  }).catch(function(err){console.error(err);});
+  fetch('/api/dashboard/report/'+num)
+    .then(function(r){ if(!r.ok) return null; return r.json(); })
+    .then(function(data){
+      if(!data) return;
+      document.getElementById('modal-title').textContent=data.title||'Report';
+      var urlBtn=document.getElementById('modal-url-btn');
+      var urlMatch=data.markdown.match(/\*\*URL:\*\*\s*(https?:\/\/\S+)/i);
+      if(!urlMatch) urlMatch=data.markdown.match(/(https?:\/\/[^\s\n)]+(?:job|career|greenhouse|lever|workday)[^\s\n)]*)/i);
+      if(urlMatch){ urlBtn.href=urlMatch[1]||urlMatch[0]; urlBtn.classList.remove('hidden'); }
+      else { urlBtn.classList.add('hidden'); }
+      var html;
+      if(typeof marked!=='undefined'){
+        html=marked.parse(data.markdown);
+      } else {
+        html=basicMd(data.markdown);
+      }
+      document.getElementById('modal-content').innerHTML=html;
+      document.getElementById('modal-overlay').classList.remove('hidden');
+    })
+    .catch(function(err){ console.error('report err:',err); });
 }
-function closeModal(e){if(e.target===document.getElementById('modal-overlay'))closeModalDirect();}
-function closeModalDirect(){document.getElementById('modal-overlay').classList.add('hidden');document.body.style.overflow='';}
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModalDirect();});
-function fallbackMd(t){
-  var e=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  e=e.replace(/^### (.+)/gm,'<h3>$1</h3>').replace(/^## (.+)/gm,'<h2>$1</h2>').replace(/^# (.+)/gm,'<h1>$1</h1>');
-  e=e.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>').replace(/\\*(.+?)\\*/g,'<em>$1</em>');
-  e=e.replace(/`(.+?)`/g,'<code>$1</code>');
-  e=e.replace(/^[-*] (.+)/gm,'<li>$1</li>');
-  e=e.replace(/^---$/gm,'<hr>');
-  e=e.replace(/\\n\\n/g,'</p><p>');
-  return '<p>'+e+'</p>';
+function basicMd(text){
+  var lines=text.split('\n'), out=[];
+  lines.forEach(function(l){
+    var s=l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if(/^### /.test(s)) out.push('<h3>'+s.slice(4)+'</h3>');
+    else if(/^## /.test(s)) out.push('<h2>'+s.slice(3)+'</h2>');
+    else if(/^# /.test(s)) out.push('<h1>'+s.slice(2)+'</h1>');
+    else if(/^[*-] /.test(s)) out.push('<li>'+s.slice(2)+'</li>');
+    else if(s.trim()==='') out.push('<br>');
+    else out.push('<p>'+s+'</p>');
+  });
+  return out.join('').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
 }
+function closeModal(e){ if(e.target===document.getElementById('modal-overlay')) closeModalDirect(); }
+function closeModalDirect(){ document.getElementById('modal-overlay').classList.add('hidden'); document.getElementById('modal-content').innerHTML=''; }
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeModalDirect(); });
+
+function renderPending(){
+  var q=(document.getElementById('pending-search').value||'').toLowerCase();
+  var filtered=allPending.filter(function(j){
+    return !q||(j.company||'').toLowerCase().includes(q)||(j.title||'').toLowerCase().includes(q)||(j.url||'').toLowerCase().includes(q);
+  });
+  var tbody=document.getElementById('pending-tbody');
+  var empty=document.getElementById('pending-empty');
+  var table=document.getElementById('pending-table');
+  document.getElementById('pending-count').textContent=allPending.length+' pending jobs'+(q?' — '+filtered.length+' match':'');
+  if(filtered.length===0){ table.style.display='none'; empty.classList.remove('hidden'); return; }
+  table.style.display=''; empty.classList.add('hidden');
+  tbody.innerHTML=filtered.map(function(j){
+    var src='<span class="source-badge '+sourceClass(j.source)+'">'+esc(j.source||'?')+'</span>';
+    var co=j.company?('<strong>'+esc(j.company)+'</strong>'):'<span class="small-text">Unknown</span>';
+    var title=j.title?('<span class="trunc" style="max-width:300px" title="'+esc(j.title)+'">'+esc(j.title)+'</span>'):'<span class="small-text trunc">'+esc(j.url)+'</span>';
+    var open='<a href="'+esc(j.url)+'" target="_blank" rel="noopener" class="open-btn">Open</a>';
+    return '<tr><td>'+src+'</td><td>'+co+'</td><td>'+title+'</td><td>'+open+'</td></tr>';
+  }).join('');
+}
+
 function renderProgress(){
-  if(!metrics)return;
-  var m=metrics;
+  if(!metrics) return;
   document.getElementById('stat-cards').innerHTML=[
-    {label:'Total Evaluated',val:m.total,color:'var(--accent)'},
-    {label:'Avg Score',val:m.avgScore?m.avgScore+'/5':'&mdash;',color:'var(--yellow)'},
-    {label:'Top Score',val:m.topScore?m.topScore+'/5':'&mdash;',color:'var(--green)'},
-    {label:'Actionable',val:m.actionable,color:'var(--blue)'},
-  ].map(function(s){return '<div class="stat-card"><div class="stat-val" style="color:'+s.color+'">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div>';}).join('');
+    {label:'Total Evaluated',val:metrics.total},
+    {label:'Avg Score',val:metrics.avgScore?metrics.avgScore.toFixed(1):'0'},
+    {label:'Top Score',val:metrics.topScore?metrics.topScore.toFixed(1):'0'},
+    {label:'Active',val:metrics.actionable||0}
+  ].map(function(s){ return '<div class="stat-card"><div class="stat-val">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div>'; }).join('');
   document.getElementById('rate-cards').innerHTML=[
-    {label:'Response Rate',val:m.responseRate+'%'},
-    {label:'Interview Rate',val:m.interviewRate+'%'},
-    {label:'Offer Rate',val:m.offerRate+'%'},
-  ].map(function(r){return '<div class="rate-card"><div class="rate-val">'+r.val+'</div><div class="rate-label">'+r.label+'</div></div>';}).join('');
-  var maxF=(m.funnel[0]&&m.funnel[0].count)||1;
-  document.getElementById('funnel-chart').innerHTML=m.funnel.map(function(row){
-    var pct=Math.max(2,Math.round(row.count/maxF*100));
-    return '<div class="funnel-row"><div class="funnel-label">'+row.label+'</div>'+
-      '<div class="funnel-bar-wrap"><div class="funnel-bar" style="width:'+pct+'%"></div></div>'+
-      '<div class="funnel-count">'+row.count+'</div></div>';
+    {label:'Response Rate',val:pct(metrics.responseRate)},
+    {label:'Interview Rate',val:pct(metrics.interviewRate)},
+    {label:'Offer Rate',val:pct(metrics.offerRate)}
+  ].map(function(s){ return '<div class="rate-card"><div class="rate-val">'+s.val+'</div><div class="rate-label">'+s.label+'</div></div>'; }).join('');
+  var maxF=Math.max.apply(null,(metrics.funnel||[]).map(function(f){return f.count;}).concat([1]));
+  document.getElementById('funnel-chart').innerHTML=(metrics.funnel||[]).map(function(f){
+    var w=Math.round((f.count/maxF)*100);
+    return '<div class="bar-row"><span class="bar-label">'+esc(f.label)+'</span><div class="bar-bg"><div class="bar-fill" style="width:'+w+'%"></div></div><span class="bar-count">'+f.count+'</span></div>';
   }).join('');
-  var bc=['var(--green)','var(--green)','var(--yellow)','var(--orange)','var(--red)'];
-  var maxS=Math.max.apply(null,m.scoreBuckets.map(function(b){return b.count;}).concat([1]));
-  document.getElementById('score-chart').innerHTML=m.scoreBuckets.map(function(b,i){
-    var pct=Math.max(2,Math.round(b.count/maxS*100));
-    return '<div class="score-bucket-row"><div class="score-bucket-label">'+b.label+'</div>'+
-      '<div class="score-bucket-bar-wrap"><div class="score-bucket-bar" style="width:'+pct+'%;background:'+bc[i]+'"></div></div>'+
-      '<div class="score-bucket-count">'+b.count+'</div></div>';
+  var maxS=Math.max.apply(null,(metrics.scoreBuckets||[]).map(function(b){return b.count;}).concat([1]));
+  document.getElementById('score-chart').innerHTML=(metrics.scoreBuckets||[]).map(function(b){
+    var w=Math.round((b.count/maxS)*100);
+    return '<div class="bar-row"><span class="bar-label">'+esc(b.label)+'</span><div class="bar-bg"><div class="bar-fill score-fill" style="width:'+w+'%"></div></div><span class="bar-count">'+b.count+'</span></div>';
   }).join('');
-  var maxW=Math.max.apply(null,m.weeklyActivity.map(function(w){return w.count;}).concat([1]));
-  document.getElementById('weekly-chart').innerHTML=m.weeklyActivity.map(function(w){
-    var pct=Math.round(w.count/maxW*100);
-    var lbl=w.week.replace(/^\\d{4}-/,'');
-    return '<div class="weekly-col"><div class="weekly-bar-wrap"><div class="weekly-bar" style="height:'+pct+'%"></div></div><div class="weekly-label">'+lbl+'</div></div>';
+  var maxW=Math.max.apply(null,(metrics.weeklyActivity||[]).map(function(w){return w.count;}).concat([1]));
+  document.getElementById('weekly-chart').innerHTML=(metrics.weeklyActivity||[]).map(function(w){
+    var h=Math.max(2,Math.round((w.count/maxW)*60));
+    var lbl=w.week.replace(/^\d{4}-/,'');
+    return '<div class="week-col"><div class="week-bar" style="height:'+h+'px" title="'+w.count+'"></div><div class="week-label">'+esc(lbl)+'</div></div>';
   }).join('');
 }
-document.addEventListener('click',function(){document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});openDropdownNum=null;});
-fetch('/api/dashboard/applications').then(function(r){return r.json();}).then(function(data){allApps=data;renderTable();updateTabCounts();}).catch(function(err){console.error(err);document.getElementById('empty-state').classList.remove('hidden');document.getElementById('apps-table').style.display='none';});
-fetch('/api/dashboard/metrics').then(function(r){return r.json();}).then(function(data){metrics=data;}).catch(function(err){console.error(err);});
-fetch('/api/dashboard/pipeline').then(function(r){return r.json();}).then(function(data){allPending=data;updateTabCounts();}).catch(function(err){console.error(err);});
+function pct(v){ return v!=null?(Math.round(v*100)+'%'):'0%'; }
+
+Promise.all([
+  fetch('/api/dashboard/applications').then(function(r){return r.json();}),
+  fetch('/api/dashboard/metrics').then(function(r){return r.json();}),
+  fetch('/api/dashboard/pipeline').then(function(r){return r.json();})
+]).then(function(res){
+  allApps=res[0]||[];
+  metrics=res[1]||null;
+  allPending=res[2]||[];
+  document.getElementById('tab-pipeline').textContent='Pipeline ('+allApps.length+')';
+  document.getElementById('tab-pending').textContent='Pending ('+allPending.length+')';
+  renderTable();
+}).catch(function(err){
+  console.error('Load error:',err);
+  document.getElementById('empty-state').classList.remove('hidden');
+  document.getElementById('apps-table').style.display='none';
+  document.getElementById('empty-state-msg').textContent='Error loading data — check console';
+});
+
 </script>
 </body>
 </html>
