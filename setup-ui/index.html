@@ -618,18 +618,30 @@ async function fetchLinkedIn() {
   document.getElementById('li-notice').style.display = 'none';
   try {
     const data = await api('POST', '/api/profile/fetch-linkedin', { url });
-    if (data.blocked || data.partial) {
+    // Always pre-fill the LinkedIn URL field (even on partial/blocked responses)
+    if (data.linkedinUrl) document.getElementById('li-url').value = data.linkedinUrl;
+    if (data.blocked) {
       const n = document.getElementById('li-notice');
       n.className = 'notice';
-      n.textContent = data.blocked
-        ? '⚠ LinkedIn blocked headless access — fill in the fields manually below.'
-        : '⚠ Only partial data extracted — review and fill in any missing fields.';
+      n.textContent = 'LinkedIn requires login to view this profile — fill in your details below.';
       n.style.display = 'block';
+      // Don't clear existing field values on a blocked response
+    } else if (data.partial) {
+      const n = document.getElementById('li-notice');
+      n.className = 'notice';
+      n.textContent = '⚠ Only partial data extracted — review and fill in any missing fields.';
+      n.style.display = 'block';
+      // Still apply whatever we got
+      if (data.name) document.getElementById('p-name').value = data.name;
+      if (data.headline) document.getElementById('p-headline').value = data.headline;
+      if (data.location) document.getElementById('p-location').value = data.location;
+    } else {
+      document.getElementById('li-notice').style.display = 'none';
+      if (data.name) document.getElementById('p-name').value = data.name;
+      if (data.headline) document.getElementById('p-headline').value = data.headline;
+      if (data.location) document.getElementById('p-location').value = data.location;
+      toast('Profile imported from LinkedIn ✓');
     }
-    if (data.name) document.getElementById('p-name').value = data.name;
-    if (data.headline) document.getElementById('p-headline').value = data.headline;
-    if (data.location) document.getElementById('p-location').value = data.location;
-    if (!data.blocked) toast('Profile imported from LinkedIn ✓');
   } catch (err) {
     toast(err.message, 'err');
   } finally {

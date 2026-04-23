@@ -130,7 +130,7 @@ app.post('/api/profile/fetch-linkedin', async (req, res) => {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => { blocked = true; });
 
     if (blocked || page.url().includes('/authwall') || page.url().includes('/login')) {
-      return res.json({ partial: true, blocked: true });
+      return res.json({ partial: true, blocked: true, linkedinUrl: url });
     }
 
     const get = async (sel) => {
@@ -142,24 +142,29 @@ app.post('/api/profile/fetch-linkedin', async (req, res) => {
       catch { return []; }
     };
 
-    const name = await get('h1');
-    const headline = await get('.top-card-layout__headline, .pv-text-details__left-panel h2');
-    const location = await get('.profile-info-subheader .not-first-item, .top-card__subline-item');
-    const positions = await getAll('.experience-item__title, .mr1.hoverable-link-text.t-bold span');
-    const companies = await getAll('.experience-item__subtitle span, .t-14.t-normal span');
-    const skills = await getAll('.pv-skill-category-entity__name-text, .skill-categories-section span');
+    // Selectors verified against live LinkedIn public profile HTML (Apr 2026)
+    const name = await get('h1.top-card-layout__title, h1');
+    const headline = await get('.top-card-layout__headline');
+    // Location: first span inside profile-info-subheader
+    const location = await get('.profile-info-subheader span:first-child');
+    // Experience: experience-item__title / experience-item__subtitle still valid on public pages
+    const positions = await getAll('.experience-item__title');
+    const companies = await getAll('.experience-item__subtitle');
+    // Skills are behind auth on public pages — return empty array gracefully
+    const skills = await getAll('.pv-skill-category-entity__name-text, .base-aside-card__title');
 
     res.json({
       partial: !name,
+      linkedinUrl: url,
       name,
       headline,
       location,
-      positions: positions.slice(0, 3),
-      companies: companies.slice(0, 3),
-      skills: skills.slice(0, 10),
+      positions: positions.slice(0, 3).map(s => s.trim()),
+      companies: companies.slice(0, 3).map(s => s.trim()),
+      skills: skills.slice(0, 10).map(s => s.trim()),
     });
   } catch (err) {
-    res.json({ partial: true, error: err.message });
+    res.json({ partial: true, linkedinUrl: url, error: err.message });
   } finally {
     await browser?.close();
   }
