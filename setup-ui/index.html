@@ -235,16 +235,16 @@ textarea { resize: vertical; min-height: 100px; }
 
 <nav class="nav">
   <span class="nav-logo">⚡ Career-Ops</span>
-  <a class="nav-pill" href="#cv" id="pill-cv" onclick="scrollTo('cv')">
+  <a class="nav-pill" href="#cv" id="pill-cv" onclick="event.preventDefault(); smoothScrollTo('cv')">
     <span class="check" id="check-cv">○</span> CV
   </a>
-  <a class="nav-pill" href="#profile" id="pill-profile" onclick="scrollTo('profile')">
+  <a class="nav-pill" href="#profile" id="pill-profile" onclick="event.preventDefault(); smoothScrollTo('profile')">
     <span class="check" id="check-profile">○</span> Profile
   </a>
-  <a class="nav-pill" href="#archetypes" id="pill-arch" onclick="scrollTo('archetypes')">
+  <a class="nav-pill" href="#archetypes" id="pill-arch" onclick="event.preventDefault(); smoothScrollTo('archetypes')">
     <span class="check" id="check-arch">○</span> Archetypes
   </a>
-  <a class="nav-pill" href="#portals" id="pill-portals" onclick="scrollTo('portals')">
+  <a class="nav-pill" href="#portals" id="pill-portals" onclick="event.preventDefault(); smoothScrollTo('portals')">
     <span class="check" id="check-portals">○</span> Portals
   </a>
 </nav>
@@ -484,7 +484,7 @@ async function api(method, path, body) {
   return json;
 }
 
-function scrollTo(id) {
+function smoothScrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -498,7 +498,16 @@ function renderTags(key) {
   state[key].forEach((val, i) => {
     const tag = document.createElement('span');
     tag.className = `tag ${color}`;
-    tag.innerHTML = `${val}<span class="remove" onclick="removeTag('${key}',${i})">×</span>`;
+    tag.textContent = val;
+    const rem = document.createElement('span');
+    rem.className = 'remove';
+    rem.setAttribute('tabindex', '0');
+    rem.setAttribute('role', 'button');
+    rem.setAttribute('aria-label', `Remove ${val}`);
+    rem.textContent = '×';
+    rem.addEventListener('click', () => removeTag(key, i));
+    rem.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); removeTag(key, i); } });
+    tag.appendChild(rem);
     wrap.insertBefore(tag, inp);
   });
 }
@@ -612,7 +621,9 @@ async function fetchLinkedIn() {
     if (data.blocked || data.partial) {
       const n = document.getElementById('li-notice');
       n.className = 'notice';
-      n.textContent = '⚠ LinkedIn blocked headless access — fill in the fields manually below.';
+      n.textContent = data.blocked
+        ? '⚠ LinkedIn blocked headless access — fill in the fields manually below.'
+        : '⚠ Only partial data extracted — review and fill in any missing fields.';
       n.style.display = 'block';
     }
     if (data.name) document.getElementById('p-name').value = data.name;
@@ -781,9 +792,9 @@ function renderCompanies(filter = '') {
   list.innerHTML = '';
   const fl = filter.toLowerCase();
   allCompanies
-    .filter(c => !fl || (c.name || '').toLowerCase().includes(fl))
-    .forEach((c) => {
-      const realIdx = allCompanies.indexOf(c);
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => !fl || (c.name || '').toLowerCase().includes(fl))
+    .forEach(({ c, i }) => {
       const row = document.createElement('div');
       row.className = 'company-row';
       const url = c.careers_url || c.api || '';
@@ -795,7 +806,7 @@ function renderCompanies(filter = '') {
         <span class="company-name">${escHtml(c.name || '')}</span>
         <span class="portal-badge badge-${ats}" style="font-size:10px">${ats}</span>
         <label class="toggle">
-          <input type="checkbox" ${c.enabled !== false ? 'checked' : ''} onchange="allCompanies[${realIdx}].enabled=this.checked">
+          <input type="checkbox" ${c.enabled !== false ? 'checked' : ''} onchange="allCompanies[${i}].enabled=this.checked">
           <span class="toggle-slider"></span>
         </label>
       `;
@@ -825,45 +836,48 @@ async function savePortals() {
 // ── Init ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const [status, profile, archetypes, portals, cvData] = await Promise.all([
+    const results = await Promise.allSettled([
       api('GET', '/api/status'),
       api('GET', '/api/profile'),
       api('GET', '/api/archetypes'),
       api('GET', '/api/portals'),
       api('GET', '/api/cv'),
     ]);
+    const [status, profile, archetypes, portals, cvData] = results.map(r =>
+      r.status === 'fulfilled' ? r.value : null
+    );
 
     // CV
-    if (status.cv) {
+    if (status?.cv) {
       document.getElementById('cv-saved-notice').style.display = 'block';
       document.getElementById('dz').style.display = 'none';
-      if (cvData.text) document.getElementById('cv-text').value = cvData.text;
+      if (cvData?.text) document.getElementById('cv-text').value = cvData.text;
       markDone('cv');
     }
 
     // Profile
     loadProfile(profile);
-    if (status.profile) markDone('profile');
+    if (status?.profile) markDone('profile');
 
     // Archetypes
-    state.archetypes = archetypes.length ? archetypes : [
+    state.archetypes = archetypes?.length ? archetypes : [
       { name: 'AI/ML Engineer', level: 'Senior/Staff', fit: 'primary' },
       { name: 'AI Product Manager', level: 'Senior', fit: 'secondary' },
       { name: 'Solutions Architect', level: 'Mid-Senior', fit: 'adjacent' },
     ];
     renderArchetypes();
-    if (status.archetypes) markDone('archetypes');
+    if (status?.archetypes) markDone('archetypes');
 
     // Portals
-    state['kw-pos'] = portals.positive || [];
-    state['kw-neg'] = portals.negative || [];
-    state.portalQueries = portals.portal_queries || [];
-    allCompanies = portals.tracked_companies || [];
+    state['kw-pos'] = portals?.positive || [];
+    state['kw-neg'] = portals?.negative || [];
+    state.portalQueries = portals?.portal_queries || [];
+    allCompanies = portals?.tracked_companies || [];
     renderTags('kw-pos');
     renderTags('kw-neg');
     renderPortalQueries();
     renderCompanies();
-    if (status.portals) markDone('portals');
+    if (status?.portals) markDone('portals');
 
   } catch (err) {
     toast('Failed to load config: ' + err.message, 'err');
