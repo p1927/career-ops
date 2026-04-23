@@ -112,6 +112,43 @@ claude   # Open Claude Code in this directory
 
 See [docs/SETUP.md](docs/SETUP.md) for the full setup guide.
 
+## Setup UI (Interactive Wizard)
+
+A web-based onboarding wizard lets you configure career-ops from scratch — no config file editing required. It runs as a local Express server and is accessible via a Cloudflare tunnel URL.
+
+### Start the wizard
+
+```bash
+npm start          # Starts server + Cloudflare tunnel in one command
+                   # Prints a public trycloudflare.com URL you can open in any browser
+```
+
+The URL changes each run (rotating trycloudflare URLs). Copy it from the terminal output.
+
+### Other launch options
+
+```bash
+npm run setup      # Server only (localhost:4737) — no tunnel
+npm run tunnel     # Tunnel only — if the server is already running
+```
+
+### What it configures
+
+| Section | What it does |
+|---------|-------------|
+| **CV** | Upload PDF, DOCX, TXT, or MD — auto-converts to `cv.md` with an editable preview |
+| **Profile** | Paste your LinkedIn URL to auto-fill all fields, then review and save to `config/profile.yml` |
+| **Archetypes** | Visual card editor — add, reorder, and set fit (primary / secondary / adjacent) |
+| **Portals** | Tag editor for title keywords (include / exclude) + portal query toggles + company list |
+
+Progress is shown in a sticky top bar. All four sections must be saved before the system is fully configured.
+
+### Stop
+
+```bash
+kill $(cat /tmp/career-ops-server.pid) $(cat /tmp/career-ops-tunnel.pid)
+```
+
 ## Gemini CLI Integration
 
 Career-ops supports [Gemini CLI](https://github.com/google-gemini/gemini-cli) natively — the same way it supports Claude Code and OpenCode. All 15 slash commands are available, using the same `modes/*.md` evaluation logic.

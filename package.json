@@ -17,7 +17,9 @@
     "scan": "node scan.mjs",
     "gemini:eval": "node gemini-eval.mjs",
     "minimax:eval": "node minimax-eval.mjs",
-    "setup": "node setup-server.mjs"
+    "setup": "node setup-server.mjs",
+    "tunnel": "bash tunnel.sh",
+    "start": "bash setup-start.sh"
   },
   "keywords": [
     "ai",
