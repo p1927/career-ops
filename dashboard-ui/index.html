@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Career-Ops Dashboard</title>
+<script src="/dashboard-ui/marked.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a24;
+  --border: #2a2a3a;
+  --accent: #7c6af7;
+  --text: #e2e2ef;
+  --muted: #666680;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --orange: #fb923c;
+  --teal: #2dd4bf;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(15,15,19,0.92); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar-logo { font-size: 15px; font-weight: 700; color: var(--accent); margin-right: 8px; }
+.tab {
+  padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); transition: all .15s; text-decoration: none;
+}
+.tab:hover { color: var(--text); border-color: var(--accent); }
+.tab.active { background: rgba(124,106,247,.15); color: var(--accent); border-color: var(--accent); }
+.tab-sep { flex: 1; }
+.back-link {
+  padding: 5px 14px; border-radius: 20px; font-size: 13px;
+  color: var(--accent); border: 1px solid var(--accent); text-decoration: none;
+}
+.back-link:hover { background: rgba(124,106,247,.1); }
+.view { display: none; padding: 20px; max-width: 1400px; margin: 0 auto; }
+.view.active { display: block; }
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.ftab {
+  padding: 5px 14px; border-radius: 16px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); transition: all .15s; user-select: none;
+}
+.ftab:hover { border-color: var(--accent); color: var(--text); }
+.ftab.active { background: rgba(124,106,247,.2); color: var(--accent); border-color: var(--accent); }
+.table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: var(--surface); }
+th {
+  padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
+  white-space: nowrap; border-bottom: 1px solid var(--border); cursor: pointer;
+}
+th:hover { color: var(--text); }
+th .sort-ind { font-size: 10px; margin-left: 4px; opacity: .5; }
+th.sorted .sort-ind { opacity: 1; color: var(--accent); }
+td { padding: 9px 12px; border-bottom: 1px solid rgba(42,42,58,.5); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr { cursor: pointer; transition: background .1s; }
+tbody tr:hover { background: rgba(124,106,247,.05); }
+.score-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.score-high { background: rgba(74,222,128,.15); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+.score-mid { background: rgba(251,191,36,.15); color: var(--yellow); border: 1px solid rgba(251,191,36,.3); }
+.score-low { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+.status-pill {
+  display: inline-block; padding: 2px 10px; border-radius: 10px;
+  font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  position: relative; user-select: none;
+}
+.s-evaluated { background: rgba(102,102,128,.15); color: var(--muted); border: 1px solid rgba(102,102,128,.3); }
+.s-applied { background: rgba(96,165,250,.15); color: var(--blue); border: 1px solid rgba(96,165,250,.3); }
+.s-interview { background: rgba(251,146,60,.15); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+.s-offer { background: rgba(74,222,128,.15); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+.s-responded { background: rgba(45,212,191,.15); color: var(--teal); border: 1px solid rgba(45,212,191,.3); }
+.s-rejected { background: rgba(42,42,58,.5); color: #44445a; border: 1px solid var(--border); }
+.status-dropdown {
+  position: absolute; top: 110%; left: 0; z-index: 200;
+  background: #1e1e2e; border: 1px solid var(--border); border-radius: 8px;
+  min-width: 140px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.status-dropdown div {
+  padding: 8px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; color: var(--text);
+}
+.status-dropdown div:hover { background: rgba(124,106,247,.15); }
+.trunc { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+.small-text { font-size: 11px; color: var(--muted); }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state h3 { font-size: 18px; margin-bottom: 10px; color: var(--text); }
+.empty-state code { background: rgba(124,106,247,.1); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--accent); }
+.hidden { display: none !important; }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 1000;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 20px; overflow-y: auto;
+}
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; width: 100%; max-width: 860px; position: relative;
+}
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.modal-title { font-size: 16px; font-weight: 600; flex: 1; }
+.modal-btn {
+  padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: var(--border);
+  color: var(--text); text-decoration: none;
+}
+.modal-btn:hover { border-color: var(--accent); }
+.modal-close {
+  background: none; border: none; color: var(--muted); font-size: 20px;
+  cursor: pointer; padding: 4px 8px; border-radius: 4px;
+}
+.modal-close:hover { color: var(--text); background: var(--border); }
+.modal-body { padding: 24px; }
+.md-content { line-height: 1.65; font-size: 14px; }
+.md-content h1 { font-size: 20px; font-weight: 700; margin: 20px 0 10px; }
+.md-content h2 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.md-content h3 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
+.md-content p { margin: 8px 0; }
+.md-content strong { color: #b0a8ff; }
+.md-content ul, .md-content ol { margin: 8px 0 8px 20px; }
+.md-content li { margin: 4px 0; }
+.md-content code { background: rgba(124,106,247,.1); padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #b0a8ff; }
+.md-content pre { background: rgba(0,0,0,.3); border: 1px solid var(--border); border-radius: 6px; padding: 12px; overflow-x: auto; margin: 10px 0; }
+.md-content pre code { background: none; padding: 0; }
+.md-content table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.md-content table th { background: rgba(42,42,58,.5); padding: 7px 10px; text-align: left; font-size: 12px; }
+.md-content table td { padding: 7px 10px; border-top: 1px solid rgba(42,42,58,.6); }
+.md-content hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.md-content a { color: var(--accent); }
+.md-content blockquote { border-left: 3px solid var(--accent); margin: 10px 0; padding: 8px 12px; background: rgba(124,106,247,.05); color: var(--muted); }
+.progress-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) { .progress-grid { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 16px; }
+.funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.funnel-label { width: 90px; font-size: 13px; flex-shrink: 0; }
+.funnel-bar-wrap { flex: 1; background: rgba(42,42,58,.5); border-radius: 4px; height: 20px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 4px; background: var(--accent); min-width: 2px; }
+.funnel-count { width: 36px; text-align: right; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.score-bucket-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.score-bucket-label { width: 70px; font-size: 12px; flex-shrink: 0; color: var(--muted); }
+.score-bucket-bar-wrap { flex: 1; background: rgba(42,42,58,.5); border-radius: 4px; height: 14px; overflow: hidden; }
+.score-bucket-bar { height: 100%; border-radius: 4px; }
+.score-bucket-count { width: 28px; text-align: right; font-size: 12px; flex-shrink: 0; }
+.weekly-chart { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+.weekly-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.weekly-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.weekly-bar { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
+.weekly-label { font-size: 10px; color: var(--muted); white-space: nowrap; max-width: 36px; text-align: center; }
+.rate-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.rate-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+.rate-val { font-size: 28px; font-weight: 700; color: var(--accent); }
+.rate-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+@media (max-width: 600px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } .rate-cards { grid-template-columns: 1fr; } }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+.stat-val { font-size: 28px; font-weight: 700; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-logo">&#9889; Dashboard</span>
+  <button class="tab active" onclick="switchView('pipeline', this)">Pipeline</button>
+  <button class="tab" onclick="switchView('progress', this)">Progress</button>
+  <span class="tab-sep"></span>
+  <a href="/" class="back-link">&#8592; Setup</a>
+</div>
+
+<div id="view-pipeline" class="view active">
+  <div class="filter-bar">
+    <div class="ftab active" onclick="setFilter('all', this)">ALL</div>
+    <div class="ftab" onclick="setFilter('evaluated', this)">EVALUATED</div>
+    <div class="ftab" onclick="setFilter('applied', this)">APPLIED</div>
+    <div class="ftab" onclick="setFilter('interview', this)">INTERVIEW</div>
+    <div class="ftab" onclick="setFilter('top', this)">TOP &ge;4.0</div>
+    <div class="ftab" onclick="setFilter('skip', this)">SKIP</div>
+  </div>
+  <div class="table-wrap">
+    <table id="apps-table">
+      <thead>
+        <tr>
+          <th onclick="sortBy('num')"># <span class="sort-ind">&#x2195;</span></th>
+          <th onclick="sortBy('date')">Date <span class="sort-ind">&#x2195;</span></th>
+          <th onclick="sortBy('company')">Company <span class="sort-ind">&#x2195;</span></th>
+          <th>Role</th>
+          <th onclick="sortBy('score')">Score <span class="sort-ind">&#x2195;</span></th>
+          <th>Status</th>
+          <th>Archetype</th>
+          <th>TL;DR</th>
+          <th>Remote</th>
+          <th>Comp</th>
+          <th>PDF</th>
+        </tr>
+      </thead>
+      <tbody id="apps-tbody"></tbody>
+    </table>
+  </div>
+  <div id="empty-state" class="empty-state hidden">
+    <h3>No applications yet</h3>
+    <p>Run <code>npm run scan</code> and evaluate some jobs first</p>
+  </div>
+</div>
+
+<div id="view-progress" class="view">
+  <div class="stat-cards" id="stat-cards"></div>
+  <div class="rate-cards" id="rate-cards"></div>
+  <div class="progress-grid">
+    <div class="card">
+      <div class="card-title">Funnel</div>
+      <div id="funnel-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Score Distribution</div>
+      <div id="score-chart"></div>
+    </div>
+    <div class="card" style="grid-column: 1 / -1">
+      <div class="card-title">Weekly Activity (last 8 weeks)</div>
+      <div class="weekly-chart" id="weekly-chart"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Report</div>
+      <a id="modal-url-btn" class="modal-btn hidden" href="#" target="_blank" rel="noopener">Open Job URL</a>
+      <button class="modal-close" onclick="closeModalDirect()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="md-content" id="modal-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var allApps = [], metrics = null, currentFilter = 'all', sortField = 'num', sortDir = 1, openDropdownNum = null;
+var STATUS_OPTIONS = ['Evaluated','Applied','Responded','Interview','Offer','Rejected','Discarded','SKIP'];
+function statusClass(s) {
+  if (!s) return 's-evaluated';
+  var l = s.toLowerCase();
+  if (l==='evaluated') return 's-evaluated';
+  if (l==='applied') return 's-applied';
+  if (l==='interview') return 's-interview';
+  if (l==='offer') return 's-offer';
+  if (l==='responded') return 's-responded';
+  return 's-rejected';
+}
+function scoreClass(s) {
+  if (s===null||s===undefined) return '';
+  if (s>=4.0) return 'score-high';
+  if (s>=3.5) return 'score-mid';
+  return 'score-low';
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function switchView(name, el) {
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  document.querySelectorAll('.topbar .tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('view-'+name).classList.add('active');
+  el.classList.add('active');
+  if (name==='progress'&&metrics) renderProgress();
+}
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.ftab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderTable();
+}
+function sortBy(field) {
+  if (sortField===field) sortDir*=-1;
+  else { sortField=field; sortDir=1; }
+  document.querySelectorAll('th').forEach(function(th){
+    th.classList.remove('sorted');
+    var ind=th.querySelector('.sort-ind');
+    if(ind) ind.textContent='\\u2195';
+  });
+  var hdrs={num:0,date:1,company:2,score:4};
+  var idx=hdrs[field];
+  if(idx!==undefined){
+    var th=document.querySelectorAll('th')[idx];
+    th.classList.add('sorted');
+    var ind=th.querySelector('.sort-ind');
+    if(ind) ind.textContent=sortDir===1?'\\u25b2':'\\u25bc';
+  }
+  renderTable();
+}
+function filterApps(apps) {
+  switch(currentFilter){
+    case 'evaluated': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='evaluated';});
+    case 'applied': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='applied';});
+    case 'interview': return apps.filter(function(a){return a.status&&a.status.toLowerCase()==='interview';});
+    case 'top': return apps.filter(function(a){return a.score!==null&&a.score>=4.0;});
+    case 'skip': return apps.filter(function(a){return a.status&&['skip','discarded','rejected'].includes(a.status.toLowerCase());});
+    default: return apps;
+  }
+}
+function renderTable() {
+  var filtered=filterApps(allApps);
+  var sorted=filtered.slice().sort(function(a,b){
+    var va=a[sortField],vb=b[sortField];
+    if(sortField==='score'){va=va!==null&&va!==undefined?va:-999;vb=vb!==null&&vb!==undefined?vb:-999;}
+    if(va<vb) return -sortDir;
+    if(va>vb) return sortDir;
+    return 0;
+  });
+  var tbody=document.getElementById('apps-tbody');
+  var empty=document.getElementById('empty-state');
+  var table=document.getElementById('apps-table');
+  if(sorted.length===0){table.style.display='none';empty.classList.remove('hidden');return;}
+  table.style.display='';
+  empty.classList.add('hidden');
+  tbody.innerHTML=sorted.map(function(app){
+    var sc=app.score!==null&&app.score!==undefined
+      ?'<span class="score-badge '+scoreClass(app.score)+'">'+(app.scoreRaw||app.score)+'</span>'
+      :'<span class="small-text">&mdash;</span>';
+    var st='<span class="status-pill '+statusClass(app.status)+'" onclick="toggleStatusDropdown(event,'+app.num+')">'+(app.status||'&mdash;')+'</span>';
+    var arch=app.archetype?'<span class="trunc" title="'+esc(app.archetype)+'">'+esc(app.archetype)+'</span>':'<span class="small-text">&mdash;</span>';
+    var tldr=app.tldr?'<span class="trunc" title="'+esc(app.tldr)+'">'+esc(app.tldr)+'</span>':'<span class="small-text">&mdash;</span>';
+    var remote=app.remote?'<span class="small-text trunc" title="'+esc(app.remote)+'">'+esc(app.remote)+'</span>':'<span class="small-text">&mdash;</span>';
+    var comp=app.comp?'<span class="small-text trunc" title="'+esc(app.comp)+'">'+esc(app.comp)+'</span>':'<span class="small-text">&mdash;</span>';
+    var pdf=app.hasPDF?'\\u2705':'&mdash;';
+    return '<tr onclick="openReport('+app.num+')">'+
+      '<td>'+app.num+'</td>'+
+      '<td class="small-text">'+esc(app.date)+'</td>'+
+      '<td><strong>'+esc(app.company)+'</strong></td>'+
+      '<td class="trunc" style="max-width:180px" title="'+esc(app.role)+'">'+esc(app.role)+'</td>'+
+      '<td>'+sc+'</td>'+
+      '<td onclick="event.stopPropagation()">'+st+'</td>'+
+      '<td>'+arch+'</td><td>'+tldr+'</td><td>'+remote+'</td><td>'+comp+'</td>'+
+      '<td style="text-align:center">'+pdf+'</td></tr>';
+  }).join('');
+  document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});
+}
+function toggleStatusDropdown(e,num){
+  e.stopPropagation();
+  document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});
+  if(openDropdownNum===num){openDropdownNum=null;return;}
+  openDropdownNum=num;
+  var pill=e.currentTarget;
+  var dd=document.createElement('div');
+  dd.className='status-dropdown';
+  dd.innerHTML=STATUS_OPTIONS.map(function(s){return '<div onclick="updateStatus('+num+',\\''+s+'\\',event)">'+s+'</div>';}).join('');
+  pill.style.position='relative';
+  pill.appendChild(dd);
+}
+function updateStatus(num,status,e){
+  e.stopPropagation();
+  document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});
+  openDropdownNum=null;
+  fetch('/api/dashboard/applications/'+num+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(function(r){
+    if(r.ok){var app=allApps.find(function(a){return a.num===num;});if(app)app.status=status;renderTable();}
+  }).catch(function(err){console.error(err);});
+}
+function openReport(num){
+  fetch('/api/dashboard/report/'+num).then(function(r){if(!r.ok)return null;return r.json();}).then(function(data){
+    if(!data)return;
+    document.getElementById('modal-title').textContent=data.title;
+    var urlMatch=data.markdown.match(/\\*\\*URL[:\\s]*\\*\\*[:\\s]*(https?:\\/\\/[^\\s\\n]+)/i);
+    if(!urlMatch)urlMatch=data.markdown.match(/(https?:\\/\\/[^\\s\\n)]+(?:job|career|greenhouse|lever|workday)[^\\s\\n)]*)/i);
+    var urlBtn=document.getElementById('modal-url-btn');
+    if(urlMatch){urlBtn.href=urlMatch[1]||urlMatch[0];urlBtn.classList.remove('hidden');}
+    else{urlBtn.classList.add('hidden');}
+    var html=(typeof marked!=='undefined')?marked.parse(data.markdown):fallbackMd(data.markdown);
+    document.getElementById('modal-content').innerHTML=html;
+    document.getElementById('modal-overlay').classList.remove('hidden');
+    document.body.style.overflow='hidden';
+  }).catch(function(err){console.error(err);});
+}
+function closeModal(e){if(e.target===document.getElementById('modal-overlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modal-overlay').classList.add('hidden');document.body.style.overflow='';}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModalDirect();});
+function fallbackMd(t){
+  var e=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  e=e.replace(/^### (.+)/gm,'<h3>$1</h3>').replace(/^## (.+)/gm,'<h2>$1</h2>').replace(/^# (.+)/gm,'<h1>$1</h1>');
+  e=e.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>').replace(/\\*(.+?)\\*/g,'<em>$1</em>');
+  e=e.replace(/`(.+?)`/g,'<code>$1</code>');
+  e=e.replace(/^[-*] (.+)/gm,'<li>$1</li>');
+  e=e.replace(/^---$/gm,'<hr>');
+  e=e.replace(/\\n\\n/g,'</p><p>');
+  return '<p>'+e+'</p>';
+}
+function renderProgress(){
+  if(!metrics)return;
+  var m=metrics;
+  document.getElementById('stat-cards').innerHTML=[
+    {label:'Total Evaluated',val:m.total,color:'var(--accent)'},
+    {label:'Avg Score',val:m.avgScore?m.avgScore+'/5':'&mdash;',color:'var(--yellow)'},
+    {label:'Top Score',val:m.topScore?m.topScore+'/5':'&mdash;',color:'var(--green)'},
+    {label:'Actionable',val:m.actionable,color:'var(--blue)'},
+  ].map(function(s){return '<div class="stat-card"><div class="stat-val" style="color:'+s.color+'">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div>';}).join('');
+  document.getElementById('rate-cards').innerHTML=[
+    {label:'Response Rate',val:m.responseRate+'%'},
+    {label:'Interview Rate',val:m.interviewRate+'%'},
+    {label:'Offer Rate',val:m.offerRate+'%'},
+  ].map(function(r){return '<div class="rate-card"><div class="rate-val">'+r.val+'</div><div class="rate-label">'+r.label+'</div></div>';}).join('');
+  var maxF=(m.funnel[0]&&m.funnel[0].count)||1;
+  document.getElementById('funnel-chart').innerHTML=m.funnel.map(function(row){
+    var pct=Math.max(2,Math.round(row.count/maxF*100));
+    return '<div class="funnel-row"><div class="funnel-label">'+row.label+'</div>'+
+      '<div class="funnel-bar-wrap"><div class="funnel-bar" style="width:'+pct+'%"></div></div>'+
+      '<div class="funnel-count">'+row.count+'</div></div>';
+  }).join('');
+  var bc=['var(--green)','var(--green)','var(--yellow)','var(--orange)','var(--red)'];
+  var maxS=Math.max.apply(null,m.scoreBuckets.map(function(b){return b.count;}).concat([1]));
+  document.getElementById('score-chart').innerHTML=m.scoreBuckets.map(function(b,i){
+    var pct=Math.max(2,Math.round(b.count/maxS*100));
+    return '<div class="score-bucket-row"><div class="score-bucket-label">'+b.label+'</div>'+
+      '<div class="score-bucket-bar-wrap"><div class="score-bucket-bar" style="width:'+pct+'%;background:'+bc[i]+'"></div></div>'+
+      '<div class="score-bucket-count">'+b.count+'</div></div>';
+  }).join('');
+  var maxW=Math.max.apply(null,m.weeklyActivity.map(function(w){return w.count;}).concat([1]));
+  document.getElementById('weekly-chart').innerHTML=m.weeklyActivity.map(function(w){
+    var pct=Math.round(w.count/maxW*100);
+    var lbl=w.week.replace(/^\\d{4}-/,'');
+    return '<div class="weekly-col"><div class="weekly-bar-wrap"><div class="weekly-bar" style="height:'+pct+'%"></div></div><div class="weekly-label">'+lbl+'</div></div>';
+  }).join('');
+}
+document.addEventListener('click',function(){document.querySelectorAll('.status-dropdown').forEach(function(d){d.remove();});openDropdownNum=null;});
+fetch('/api/dashboard/applications').then(function(r){return r.json();}).then(function(data){allApps=data;renderTable();}).catch(function(err){console.error(err);document.getElementById('empty-state').classList.remove('hidden');document.getElementById('apps-table').style.display='none';});
+fetch('/api/dashboard/metrics').then(function(r){return r.json();}).then(function(data){metrics=data;}).catch(function(err){console.error(err);});
+</script>
+</body>
+</html>
